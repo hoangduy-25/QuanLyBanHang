@@ -151,6 +151,7 @@
     <Compile Include="Controllers\Api\TaiKhoanController.cs" />
     <Compile Include="Controllers\Api\UploadController.cs" />
     <Compile Include="Controllers\Api\XacThucController.cs" />
+    <Compile Include="Controllers\BaseMvcController.cs" />
     <Compile Include="Controllers\DonHangController.cs" />
     <Compile Include="Controllers\GioHangController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
@@ -300,27 +301,6 @@
     </Content>
     <Content Include="Views\Web.config" />
     <Content Include="Views\_ViewStart.cshtml" />
-    <Content Include="Views\Shared\Error.cshtml" />
-    <Content Include="Views\Shared\_Layout.cshtml" />
-    <Content Include="Views\Home\About.cshtml" />
-    <Content Include="Views\Home\Contact.cshtml" />
-    <Content Include="Views\Home\Index.cshtml" />
-    <Content Include="Views\DonHang\Index.cshtml" />
-    <Content Include="Views\GioHang\Index.cshtml" />
-    <Content Include="Views\GioHang\ThanhToan.cshtml" />
-    <Content Include="Views\GioHang\YeuThich.cshtml" />
-    <Content Include="Views\MaGiamGia\Index.cshtml" />
-    <Content Include="Views\QuanTri\DanhGia.cshtml" />
-    <Content Include="Views\QuanTri\DonHang.cshtml" />
-    <Content Include="Views\QuanTri\Index.cshtml" />
-    <Content Include="Views\QuanTri\Kho.cshtml" />
-    <Content Include="Views\QuanTri\MaGiamGia.cshtml" />
-    <Content Include="Views\QuanTri\SanPham.cshtml" />
-    <Content Include="Views\QuanTri\TaiKhoan.cshtml" />
-    <Content Include="Views\README_BUOC6.md" />
-    <Content Include="Views\SanPham\ChiTiet.cshtml" />
-    <Content Include="Views\TaiKhoan\Index.cshtml" />
-    <Content Include="Views\XacThuc\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
