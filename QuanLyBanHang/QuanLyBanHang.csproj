@@ -56,12 +56,21 @@
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.9\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.DynamicData" />
     <Reference Include="System.Web.Entity" />
     <Reference Include="System.Web.ApplicationServices" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Web.Http, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.9\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.WebHost.5.2.9\lib\net45\System.Web.Http.WebHost.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
@@ -127,6 +136,20 @@
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Controllers\Api\BaoCaoController.cs" />
+    <Compile Include="Controllers\Api\BaseApiController.cs" />
+    <Compile Include="Controllers\Api\DanhGiaController.cs" />
+    <Compile Include="Controllers\Api\DanhMucController.cs" />
+    <Compile Include="Controllers\Api\DatHangController.cs" />
+    <Compile Include="Controllers\Api\DiaChiController.cs" />
+    <Compile Include="Controllers\Api\DonHangController.cs" />
+    <Compile Include="Controllers\Api\GioHangController.cs" />
+    <Compile Include="Controllers\Api\KhoController.cs" />
+    <Compile Include="Controllers\Api\MaGiamGiaController.cs" />
+    <Compile Include="Controllers\Api\SanPhamController.cs" />
+    <Compile Include="Controllers\Api\TaiKhoanController.cs" />
+    <Compile Include="Controllers\Api\XacThucController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Data\Configurations\BienDongKhoConfiguration.cs" />
     <Compile Include="Data\Configurations\ChiTietDonHangConfiguration.cs" />
@@ -149,6 +172,10 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Auth\JwtTokenHelper.cs" />
+    <Compile Include="Infrastructure\Filters\GlobalExceptionFilterAttribute.cs" />
+    <Compile Include="Infrastructure\Filters\JwtAuthorizeAttribute.cs" />
+    <Compile Include="Infrastructure\Filters\ValidateModelAttribute.cs" />
     <Compile Include="Models\DTOs\BaoCao\BaoCaoDtos.cs" />
     <Compile Include="Models\DTOs\Common\CommonDtos.cs" />
     <Compile Include="Models\DTOs\DanhGia\DanhGiaDtos.cs" />
@@ -202,6 +229,21 @@
     <Compile Include="Repositories\Interfaces\IGenericRepository.cs" />
     <Compile Include="Repositories\Interfaces\ISpecializedRepositories.cs" />
     <Compile Include="Repositories\Interfaces\IUnitOfWork.cs" />
+    <Compile Include="Services\Exceptions\AppException.cs" />
+    <Compile Include="Services\Helpers\PasswordHasher.cs" />
+    <Compile Include="Services\Implementations\BaoCaoService.cs" />
+    <Compile Include="Services\Implementations\DanhGiaService.cs" />
+    <Compile Include="Services\Implementations\DanhMucService.cs" />
+    <Compile Include="Services\Implementations\DatHangService.cs" />
+    <Compile Include="Services\Implementations\DiaChiService.cs" />
+    <Compile Include="Services\Implementations\DonHangService.cs" />
+    <Compile Include="Services\Implementations\GioHangService.cs" />
+    <Compile Include="Services\Implementations\KhoService.cs" />
+    <Compile Include="Services\Implementations\MaGiamGiaService.cs" />
+    <Compile Include="Services\Implementations\SanPhamService.cs" />
+    <Compile Include="Services\Implementations\TaiKhoanService.cs" />
+    <Compile Include="Services\Implementations\XacThucService.cs" />
+    <Compile Include="Services\Interfaces\IServices.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap-grid.css" />
@@ -229,6 +271,7 @@
     <Content Include="Scripts\bootstrap.esm.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Controllers\Api\README_BUOC5.md" />
     <None Include="Scripts\jquery-3.7.0.intellisense.js" />
     <Content Include="Scripts\jquery-3.7.0.js" />
     <Content Include="Scripts\jquery-3.7.0.min.js" />
