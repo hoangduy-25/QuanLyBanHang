@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\EntityFramework.6.5.1\build\EntityFramework.props" Condition="Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.props')" />
   <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -45,16 +46,31 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.5.1\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.5.1\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.9\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.DynamicData" />
     <Reference Include="System.Web.Entity" />
     <Reference Include="System.Web.ApplicationServices" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Web.Http, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.9\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=5.2.9.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.WebHost.5.2.9\lib\net45\System.Web.Http.WebHost.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
@@ -120,11 +136,114 @@
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Controllers\Api\BaoCaoController.cs" />
+    <Compile Include="Controllers\Api\BaseApiController.cs" />
+    <Compile Include="Controllers\Api\DanhGiaController.cs" />
+    <Compile Include="Controllers\Api\DanhMucController.cs" />
+    <Compile Include="Controllers\Api\DatHangController.cs" />
+    <Compile Include="Controllers\Api\DiaChiController.cs" />
+    <Compile Include="Controllers\Api\DonHangController.cs" />
+    <Compile Include="Controllers\Api\GioHangController.cs" />
+    <Compile Include="Controllers\Api\KhoController.cs" />
+    <Compile Include="Controllers\Api\MaGiamGiaController.cs" />
+    <Compile Include="Controllers\Api\SanPhamController.cs" />
+    <Compile Include="Controllers\Api\TaiKhoanController.cs" />
+    <Compile Include="Controllers\Api\XacThucController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Data\Configurations\BienDongKhoConfiguration.cs" />
+    <Compile Include="Data\Configurations\ChiTietDonHangConfiguration.cs" />
+    <Compile Include="Data\Configurations\ChiTietGioHangConfiguration.cs" />
+    <Compile Include="Data\Configurations\DanhGiaConfiguration.cs" />
+    <Compile Include="Data\Configurations\DanhMucConfiguration.cs" />
+    <Compile Include="Data\Configurations\DiaChiNhanHangConfiguration.cs" />
+    <Compile Include="Data\Configurations\DonHangConfiguration.cs" />
+    <Compile Include="Data\Configurations\GioHangConfiguration.cs" />
+    <Compile Include="Data\Configurations\LichSuDonHangConfiguration.cs" />
+    <Compile Include="Data\Configurations\LichSuKhoaTaiKhoanConfiguration.cs" />
+    <Compile Include="Data\Configurations\MaGiamGiaConfiguration.cs" />
+    <Compile Include="Data\Configurations\PhanHoiDanhGiaConfiguration.cs" />
+    <Compile Include="Data\Configurations\SanPhamConfiguration.cs" />
+    <Compile Include="Data\Configurations\TaiKhoanConfiguration.cs" />
+    <Compile Include="Data\Configurations\ThichDanhGiaConfiguration.cs" />
+    <Compile Include="Data\Configurations\TonKhoConfiguration.cs" />
+    <Compile Include="Data\Configurations\YeuThichSanPhamConfiguration.cs" />
+    <Compile Include="Data\QuanLyBanHangDbContext.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Auth\JwtTokenHelper.cs" />
+    <Compile Include="Infrastructure\Filters\GlobalExceptionFilterAttribute.cs" />
+    <Compile Include="Infrastructure\Filters\JwtAuthorizeAttribute.cs" />
+    <Compile Include="Infrastructure\Filters\ValidateModelAttribute.cs" />
+    <Compile Include="Models\DTOs\BaoCao\BaoCaoDtos.cs" />
+    <Compile Include="Models\DTOs\Common\CommonDtos.cs" />
+    <Compile Include="Models\DTOs\DanhGia\DanhGiaDtos.cs" />
+    <Compile Include="Models\DTOs\DanhMuc\DanhMucDtos.cs" />
+    <Compile Include="Models\DTOs\DatHang\DatHangDtos.cs" />
+    <Compile Include="Models\DTOs\DiaChi\DiaChiDtos.cs" />
+    <Compile Include="Models\DTOs\DonHang\DonHangDtos.cs" />
+    <Compile Include="Models\DTOs\GioHang\GioHangDtos.cs" />
+    <Compile Include="Models\DTOs\Kho\KhoDtos.cs" />
+    <Compile Include="Models\DTOs\MaGiamGia\MaGiamGiaDtos.cs" />
+    <Compile Include="Models\DTOs\SanPham\SanPhamDtos.cs" />
+    <Compile Include="Models\DTOs\TaiKhoan\TaiKhoanDtos.cs" />
+    <Compile Include="Models\DTOs\XacThuc\XacThucDtos.cs" />
+    <Compile Include="Models\Entities\BienDongKho.cs" />
+    <Compile Include="Models\Entities\ChiTietDonHang.cs" />
+    <Compile Include="Models\Entities\ChiTietGioHang.cs" />
+    <Compile Include="Models\Entities\DanhGia.cs" />
+    <Compile Include="Models\Entities\DanhMuc.cs" />
+    <Compile Include="Models\Entities\DiaChiNhanHang.cs" />
+    <Compile Include="Models\Entities\DonHang.cs" />
+    <Compile Include="Models\Entities\GioHang.cs" />
+    <Compile Include="Models\Entities\LichSuDonHang.cs" />
+    <Compile Include="Models\Entities\LichSuKhoaTaiKhoan.cs" />
+    <Compile Include="Models\Entities\MaGiamGia.cs" />
+    <Compile Include="Models\Entities\PhanHoiDanhGia.cs" />
+    <Compile Include="Models\Entities\SanPham.cs" />
+    <Compile Include="Models\Entities\TaiKhoan.cs" />
+    <Compile Include="Models\Entities\ThichDanhGia.cs" />
+    <Compile Include="Models\Entities\TonKho.cs" />
+    <Compile Include="Models\Entities\YeuThichSanPham.cs" />
+    <Compile Include="Models\Enums\GioiTinh.cs" />
+    <Compile Include="Models\Enums\LoaiBienDongKho.cs" />
+    <Compile Include="Models\Enums\LoaiGiamGia.cs" />
+    <Compile Include="Models\Enums\PhuongThucThanhToan.cs" />
+    <Compile Include="Models\Enums\TrangThaiDonHang.cs" />
+    <Compile Include="Models\Enums\TrangThaiTaiKhoan.cs" />
+    <Compile Include="Models\Enums\VaiTro.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\Implementations\BaoCaoRepository.cs" />
+    <Compile Include="Repositories\Implementations\DanhGiaRepository.cs" />
+    <Compile Include="Repositories\Implementations\DanhMucRepository.cs" />
+    <Compile Include="Repositories\Implementations\DiaChiRepository.cs" />
+    <Compile Include="Repositories\Implementations\DonHangRepository.cs" />
+    <Compile Include="Repositories\Implementations\GenericRepository.cs" />
+    <Compile Include="Repositories\Implementations\GioHangRepository.cs" />
+    <Compile Include="Repositories\Implementations\KhoRepository.cs" />
+    <Compile Include="Repositories\Implementations\MaGiamGiaRepository.cs" />
+    <Compile Include="Repositories\Implementations\SanPhamRepository.cs" />
+    <Compile Include="Repositories\Implementations\TaiKhoanRepository.cs" />
+    <Compile Include="Repositories\Implementations\UnitOfWork.cs" />
+    <Compile Include="Repositories\Interfaces\IGenericRepository.cs" />
+    <Compile Include="Repositories\Interfaces\ISpecializedRepositories.cs" />
+    <Compile Include="Repositories\Interfaces\IUnitOfWork.cs" />
+    <Compile Include="Services\Exceptions\AppException.cs" />
+    <Compile Include="Services\Helpers\PasswordHasher.cs" />
+    <Compile Include="Services\Implementations\BaoCaoService.cs" />
+    <Compile Include="Services\Implementations\DanhGiaService.cs" />
+    <Compile Include="Services\Implementations\DanhMucService.cs" />
+    <Compile Include="Services\Implementations\DatHangService.cs" />
+    <Compile Include="Services\Implementations\DiaChiService.cs" />
+    <Compile Include="Services\Implementations\DonHangService.cs" />
+    <Compile Include="Services\Implementations\GioHangService.cs" />
+    <Compile Include="Services\Implementations\KhoService.cs" />
+    <Compile Include="Services\Implementations\MaGiamGiaService.cs" />
+    <Compile Include="Services\Implementations\SanPhamService.cs" />
+    <Compile Include="Services\Implementations\TaiKhoanService.cs" />
+    <Compile Include="Services\Implementations\XacThucService.cs" />
+    <Compile Include="Services\Interfaces\IServices.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap-grid.css" />
@@ -152,6 +271,7 @@
     <Content Include="Scripts\bootstrap.esm.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Controllers\Api\README_BUOC5.md" />
     <None Include="Scripts\jquery-3.7.0.intellisense.js" />
     <Content Include="Scripts\jquery-3.7.0.js" />
     <Content Include="Scripts\jquery-3.7.0.min.js" />
@@ -180,7 +300,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
-    <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />
@@ -248,5 +367,8 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.5.1\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.5.1\build\EntityFramework.targets'))" />
   </Target>
+  <Import Project="..\packages\EntityFramework.6.5.1\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.targets')" />
 </Project>
