@@ -1,0 +1,93 @@
+﻿@{
+    var currentAction = (ViewContext.RouteData.Values["action"] ?? "Index").ToString();
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title - HCShop Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
+    @Styles.Render("~/Content/css")
+    <link href="@Url.Content("~/Content/hcshop.css")" rel="stylesheet" />
+</head>
+<body class="hc-body">
+    <div class="hc-portal-wrap">
+        <aside class="hc-portal-sidebar no-print">
+            <div class="d-flex align-items-center gap-2 pb-3 mb-3 border-bottom">
+                <span id="portal-avatar" class="hc-logo-badge">A</span>
+                <div class="lh-sm overflow-hidden">
+                    <div id="portal-user-name" class="fw-bold small text-truncate">Quản trị viên</div>
+                    <div id="portal-user-email" class="text-muted text-truncate" style="font-size:12px">admin@hcshop.vn</div>
+                </div>
+            </div>
+
+            <nav class="flex-grow-1">
+                <a class="hc-portal-nav-link portal-admin-only @(currentAction == "Index" ? "active" : "")" href="@Url.Action("Index", "QuanTri")">
+                    <span>Báo cáo &amp; Tổng quan</span>
+                </a>
+                <a class="hc-portal-nav-link @(currentAction == "DonHang" ? "active" : "")" href="@Url.Action("DonHang", "QuanTri")">
+                    <span>Đơn hàng</span>
+                </a>
+                <a class="hc-portal-nav-link portal-admin-only @(currentAction == "Kho" ? "active" : "")" href="@Url.Action("Kho", "QuanTri")">
+                    <span>Kho hàng</span>
+                </a>
+                <a class="hc-portal-nav-link portal-admin-only @(currentAction == "SanPham" ? "active" : "")" href="@Url.Action("SanPham", "QuanTri")">
+                    <span>Sản phẩm &amp; Danh mục</span>
+                </a>
+                <a class="hc-portal-nav-link portal-admin-only @(currentAction == "MaGiamGia" ? "active" : "")" href="@Url.Action("MaGiamGia", "QuanTri")">
+                    <span>Mã giảm giá</span>
+                </a>
+                <a class="hc-portal-nav-link @(currentAction == "DanhGia" ? "active" : "")" href="@Url.Action("DanhGia", "QuanTri")">
+                    <span>Đánh giá</span>
+                </a>
+                <a class="hc-portal-nav-link portal-admin-only @(currentAction == "TaiKhoan" ? "active" : "")" href="@Url.Action("TaiKhoan", "QuanTri")">
+                    <span>Tài khoản</span>
+                </a>
+            </nav>
+
+            <div class="pt-3 border-top d-grid gap-2">
+                <a href="@Url.Action("Index", "Home")" class="btn btn-outline-dark btn-sm hc-pill">Trang bán hàng</a>
+                <button type="button" onclick="HCShopApi.logout()" class="btn btn-outline-danger btn-sm hc-pill">Đăng xuất</button>
+            </div>
+        </aside>
+
+        <div class="hc-portal-main">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4 no-print">
+                <h4 class="fw-bold mb-0" id="portal-greeting">Xin chào</h4>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-light border btn-sm hc-pill" href="@Url.Action("DonHang", "QuanTri")">Đơn hàng</a>
+                    <a class="btn btn-light border btn-sm hc-pill portal-admin-only" href="@Url.Action("Kho", "QuanTri")">Nhập kho</a>
+                    <a class="btn hc-btn-primary btn-sm px-3 portal-admin-only" target="_blank" href="/api/bao-cao/in-bao-cao?loaiBaoCao=tong-quan">Xuất báo cáo</a>
+                    <a class="btn hc-btn-cart btn-sm px-3" href="@Url.Action("Index", "Home")">HCShop</a>
+                </div>
+            </div>
+            @RenderBody()
+        </div>
+    </div>
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+    <script src="@Url.Content("~/Scripts/hcshop-api.js")"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const u = HCShopApi.getUser();
+            if (!u || (u.vaiTro !== "QuanLy" && u.vaiTro !== "NhanVien")) {
+                window.location.href = "/XacThuc";
+                return;
+            }
+            document.getElementById("portal-user-name").textContent = u.hoTen;
+            document.getElementById("portal-user-email").textContent = u.email;
+            document.getElementById("portal-avatar").textContent = (u.hoTen || "A").substring(0, 1).toUpperCase();
+            document.getElementById("portal-greeting").textContent = "Xin chào, " + u.hoTen;
+
+            // Phân quyền Sidebar khớp hcshop-ui: Nhân viên chỉ thấy Đơn hàng & Đánh giá
+            if (u.vaiTro === "NhanVien") {
+                document.querySelectorAll(".portal-admin-only").forEach(el => el.classList.add("d-none"));
+            }
+        });
+    </script>
+    @RenderSection("scripts", required: false)
+</body>
+</html>

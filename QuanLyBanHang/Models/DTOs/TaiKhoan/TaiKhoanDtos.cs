@@ -8,7 +8,7 @@ namespace QuanLyBanHang.Models.DTOs.TaiKhoan
     // UC-06: GET /api/tai-khoan/ho-so
     public class HoSoResponse
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string HoTen { get; set; }
         public string Email { get; set; }
         public string SoDienThoai { get; set; }
@@ -54,7 +54,7 @@ namespace QuanLyBanHang.Models.DTOs.TaiKhoan
 
     public class TaiKhoanListItemResponse
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string HoTen { get; set; }
         public string Email { get; set; }
         public string SoDienThoai { get; set; }
@@ -74,7 +74,7 @@ namespace QuanLyBanHang.Models.DTOs.TaiKhoan
 
     public class KhoaMoTaiKhoanResponse
     {
-        public Guid TaiKhoanId { get; set; }
+        public int TaiKhoanId { get; set; }
         public string TrangThaiMoi { get; set; }
         public string LyDo { get; set; }
         public int SoDonDangXuLy { get; set; }
@@ -83,9 +83,9 @@ namespace QuanLyBanHang.Models.DTOs.TaiKhoan
 
     public class LichSuKhoaResponse
     {
-        public Guid Id { get; set; }
-        public Guid TaiKhoanId { get; set; }
-        public Guid QuanLyId { get; set; }
+        public int Id { get; set; }
+        public int TaiKhoanId { get; set; }
+        public int QuanLyId { get; set; }
         public string TenQuanLy { get; set; }
         public string TrangThaiMoi { get; set; }
         public string LyDo { get; set; }

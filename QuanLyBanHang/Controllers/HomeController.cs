@@ -1,30 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿using System.Threading.Tasks;
 using System.Web.Mvc;
+using QuanLyBanHang.Models.DTOs.SanPham;
+using QuanLyBanHang.Services.Implementations;
+using QuanLyBanHang.Services.Interfaces;
 
 namespace QuanLyBanHang.Controllers
 {
-    public class HomeController : Controller
+    /// <summary>
+    /// Trang chủ Storefront - khớp CatalogPage.tsx (UC-11, UC-12, UC-17, UC-19).
+    /// </summary>
+    public class HomeController : BaseMvcController
     {
-        public ActionResult Index()
+        private readonly IDanhMucService _danhMucService;
+        private readonly ISanPhamService _sanPhamService;
+
+        public HomeController()
         {
-            return View();
+            _danhMucService = new DanhMucService(UnitOfWork);
+            _sanPhamService = new SanPhamService(UnitOfWork);
         }
 
-        public ActionResult About()
+        public async Task<ActionResult> Index(SanPhamFilterQuery query)
         {
-            ViewBag.Message = "Your application description page.";
-
-            return View();
-        }
-
-        public ActionResult Contact()
-        {
-            ViewBag.Message = "Your contact page.";
-
-            return View();
+            var q = query ?? new SanPhamFilterQuery { Page = 1, PageSize = 8 };
+            if (q.PageSize <= 0) q.PageSize = 8;
+            ViewBag.DanhMucs = await _danhMucService.XemDanhSachAsync(false);
+            ViewBag.Query = q;
+            var paged = await _sanPhamService.XemDanhSachAsync(q, false);
+            return View(paged);
         }
     }
 }

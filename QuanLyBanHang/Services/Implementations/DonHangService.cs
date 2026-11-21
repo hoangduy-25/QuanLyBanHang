@@ -22,13 +22,13 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-38: Xem danh sách đơn hàng
-        public async Task<PagedResult<DonHangListItemResponse>> XemDanhSachAsync(Guid nguoiDungId, string vaiTro, DonHangFilterQuery query)
+        public async Task<PagedResult<DonHangListItemResponse>> XemDanhSachAsync(int nguoiDungId, string vaiTro, DonHangFilterQuery query)
         {
             var q = query ?? new DonHangFilterQuery();
             if (q.TuNgay.HasValue && q.DenNgay.HasValue && q.TuNgay.Value > q.DenNgay.Value)
                 throw new BadRequestException("Khoảng thời gian lọc không hợp lệ.");
 
-            Guid? filterTaiKhoan = vaiTro == VaiTro.KhachHang.ToString() ? (Guid?)nguoiDungId : null;
+            int? filterTaiKhoan = vaiTro == VaiTro.KhachHang.ToString() ? (int?)nguoiDungId : null;
             var paged = await _uow.DonHangs.GetPagedAsync(q, filterTaiKhoan);
 
             return new PagedResult<DonHangListItemResponse>
@@ -53,7 +53,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-39: Xem chi tiết đơn hàng
-        public async Task<DonHangChiTietResponse> XemChiTietAsync(Guid nguoiDungId, string vaiTro, Guid donHangId)
+        public async Task<DonHangChiTietResponse> XemChiTietAsync(int nguoiDungId, string vaiTro, int donHangId)
         {
             var dh = await _uow.DonHangs.GetDetailByIdAsync(donHangId);
             if (dh == null || (vaiTro == VaiTro.KhachHang.ToString() && dh.TaiKhoanId != nguoiDungId))
@@ -99,7 +99,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-41: Hủy đơn hàng (hoàn tồn kho + hoàn lượt mã giảm giá + ghi lịch sử)
-        public async Task HuyAsync(Guid nguoiDungId, string vaiTro, Guid donHangId, HuyDonHangRequest request)
+        public async Task HuyAsync(int nguoiDungId, string vaiTro, int donHangId, HuyDonHangRequest request)
         {
             var dh = await _uow.DonHangs.GetDetailByIdAsync(donHangId);
             if (dh == null)
@@ -168,7 +168,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-42: Tra cứu hành trình đơn hàng
-        public async Task<List<LichSuDonHangItemResponse>> TraCuuHanhTrinhAsync(Guid khachHangId, Guid donHangId)
+        public async Task<List<LichSuDonHangItemResponse>> TraCuuHanhTrinhAsync(int khachHangId, int donHangId)
         {
             var dh = await _uow.DonHangs.GetByIdAsync(donHangId);
             if (dh == null || dh.TaiKhoanId != khachHangId)
@@ -186,7 +186,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-43: Nhân viên xác nhận đơn hàng
-        public async Task XacNhanAsync(Guid nhanVienId, Guid donHangId)
+        public async Task XacNhanAsync(int nhanVienId, int donHangId)
         {
             var dh = await _uow.DonHangs.GetByIdAsync(donHangId);
             if (dh == null)
@@ -209,7 +209,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-44: Cập nhật trạng thái đơn hàng theo đúng thứ tự: DaXacNhan -> DangChuanBi -> DangGiao -> HoanThanh
-        public async Task CapNhatTrangThaiAsync(Guid nhanVienId, Guid donHangId, CapNhatTrangThaiDonHangRequest request)
+        public async Task CapNhatTrangThaiAsync(int nhanVienId, int donHangId, CapNhatTrangThaiDonHangRequest request)
         {
             var dh = await _uow.DonHangs.GetByIdAsync(donHangId);
             if (dh == null)

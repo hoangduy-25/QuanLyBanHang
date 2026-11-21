@@ -38,7 +38,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             return q.OrderByDescending(m => m.NgayKetThuc).ToListAsync();
         }
 
-        public Task<MaGiamGia> GetActiveByIdAsync(Guid id)
+        public Task<MaGiamGia> GetActiveByIdAsync(int id)
         {
             return DbSet.FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted);
         }
@@ -49,7 +49,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             return DbSet.FirstOrDefaultAsync(m => !m.IsDeleted && m.Ma.ToLower() == normalized);
         }
 
-        public Task<bool> ExistsMaAsync(string ma, Guid? excludeId = null)
+        public Task<bool> ExistsMaAsync(string ma, int? excludeId = null)
         {
             var normalized = (ma ?? string.Empty).Trim().ToLower();
             return DbSet.AnyAsync(m =>
@@ -58,7 +58,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 (!excludeId.HasValue || m.Id != excludeId.Value));
         }
 
-        public Task<bool> HasBeenUsedInDonHangAsync(Guid maGiamGiaId)
+        public Task<bool> HasBeenUsedInDonHangAsync(int maGiamGiaId)
         {
             return Context.DonHangs.AnyAsync(d => d.MaGiamGiaId == maGiamGiaId);
         }

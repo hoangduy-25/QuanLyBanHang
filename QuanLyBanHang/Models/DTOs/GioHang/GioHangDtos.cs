@@ -12,7 +12,7 @@ namespace QuanLyBanHang.Models.DTOs.GioHang
             Items = new List<ChiTietGioHangItemResponse>();
         }
 
-        public Guid GioHangId { get; set; }
+        public int GioHangId { get; set; }
         public List<ChiTietGioHangItemResponse> Items { get; set; }
         public int TongSoLuongKhaDung { get; set; }
         public decimal TongTienTamTinh { get; set; }
@@ -20,7 +20,7 @@ namespace QuanLyBanHang.Models.DTOs.GioHang
 
     public class ChiTietGioHangItemResponse
     {
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
         public string MaSanPham { get; set; }
         public string TenSanPham { get; set; }
         public string HinhAnh { get; set; }
@@ -38,7 +38,7 @@ namespace QuanLyBanHang.Models.DTOs.GioHang
     public class ThemVaoGioRequest
     {
         [Required]
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng phải lớn hơn 0.")]
         public int SoLuong { get; set; } = 1;
@@ -54,7 +54,7 @@ namespace QuanLyBanHang.Models.DTOs.GioHang
     // UC-33: GET /api/gio-hang/yeu-thich
     public class YeuThichItemResponse
     {
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
         public string MaSanPham { get; set; }
         public string TenSanPham { get; set; }
         public string HinhAnh { get; set; }

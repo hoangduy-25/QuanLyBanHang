@@ -24,7 +24,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-34: Chọn và kiểm tra địa chỉ nhận hàng
-        public async Task<ChonDiaChiResponse> ChonDiaChiAsync(Guid taiKhoanId, ChonDiaChiRequest request)
+        public async Task<ChonDiaChiResponse> ChonDiaChiAsync(int taiKhoanId, ChonDiaChiRequest request)
         {
             var dc = await _uow.DiaChis.GetByIdAndOwnerAsync(request.DiaChiId, taiKhoanId);
             if (dc == null)
@@ -41,7 +41,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-35: Áp dụng mã giảm giá (chưa trừ lượt dùng cho đến khi xác nhận đặt hàng UC-37)
-        public async Task<ApDungMaGiamGiaResponse> ApDungMaGiamGiaAsync(Guid taiKhoanId, ApDungMaGiamGiaRequest request)
+        public async Task<ApDungMaGiamGiaResponse> ApDungMaGiamGiaAsync(int taiKhoanId, ApDungMaGiamGiaRequest request)
         {
             var gioHang = await _gioHangService.XemGioHangAsync(taiKhoanId);
             if (!gioHang.Items.Any(i => i.KhaDung))
@@ -61,7 +61,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-36: Chọn phương thức thanh toán
-        public async Task<ChonPhuongThucThanhToanResponse> ChonPhuongThucThanhToanAsync(Guid taiKhoanId, ChonPhuongThucThanhToanRequest request)
+        public async Task<ChonPhuongThucThanhToanResponse> ChonPhuongThucThanhToanAsync(int taiKhoanId, ChonPhuongThucThanhToanRequest request)
         {
             var gioHang = await _gioHangService.XemGioHangAsync(taiKhoanId);
 
@@ -86,7 +86,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-40: Xem trước tóm tắt đơn hàng
-        public async Task<XemTruocDatHangResponse> XemTruocAsync(Guid taiKhoanId, XemTruocDatHangRequest request)
+        public async Task<XemTruocDatHangResponse> XemTruocAsync(int taiKhoanId, XemTruocDatHangRequest request)
         {
             var gioHang = await _gioHangService.XemGioHangAsync(taiKhoanId);
             var validItems = gioHang.Items.Where(i => i.KhaDung).ToList();
@@ -138,7 +138,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-37 & UC-40: Bấm xác nhận đặt hàng (Transaction nguyên tử: tạo đơn + trừ kho + ghi biến động + trừ lượt mã + xóa giỏ)
-        public async Task<XacNhanDatHangResponse> XacNhanDatHangAsync(Guid taiKhoanId, XacNhanDatHangRequest request)
+        public async Task<XacNhanDatHangResponse> XacNhanDatHangAsync(int taiKhoanId, XacNhanDatHangRequest request)
         {
             var diaChi = await _uow.DiaChis.GetByIdAndOwnerAsync(request.DiaChiId, taiKhoanId);
             if (diaChi == null)
@@ -196,7 +196,7 @@ namespace QuanLyBanHang.Services.Implementations
                 var donHang = new DonHang
                 {
                     TaiKhoanId = taiKhoanId,
-                    MaGiamGiaId = voucher != null ? (Guid?)voucher.Id : null,
+                    MaGiamGiaId = voucher != null ? (int?)voucher.Id : null,
                     MaDon = maDon,
                     NgayDat = DateTimeOffset.Now,
                     TrangThai = TrangThaiDonHang.ChoXacNhan.ToString(),

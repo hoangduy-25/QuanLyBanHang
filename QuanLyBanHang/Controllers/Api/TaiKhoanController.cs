@@ -30,7 +30,7 @@ namespace QuanLyBanHang.Controllers.Api
         // UC-06: PUT /api/tai-khoan/ho-so
         [HttpPut, Route("ho-so")]
         [JwtAuthorize(Roles = "KhachHang,NhanVien,QuanLy")]
-        public async Task<IHttpActionResult> CapNhatHoSo([FromBody] CapNhatHoSoRequest request)
+        public async Task<IHttpActionResult> CapNhatThongTinCaNhan([FromBody] CapNhatHoSoRequest request)
         {
             var res = await _service.CapNhatThongTinCaNhanAsync(CurrentUserId.Value, request);
             return OkApi(res, "Cập nhật thông tin cá nhân thành công.");
@@ -55,18 +55,18 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-10: PATCH /api/tai-khoan/{id}/khoa (Quản lý)
-        [HttpPatch, Route("{id:guid}/khoa")]
+        [HttpPatch, Route("{id:int}/khoa")]
         [JwtAuthorize(Roles = "QuanLy")]
-        public async Task<IHttpActionResult> Khoa(Guid id, [FromBody] KhoaTaiKhoanRequest request)
+        public async Task<IHttpActionResult> Khoa(int id, [FromBody] KhoaTaiKhoanRequest request)
         {
             var res = await _service.KhoaAsync(CurrentUserId.Value, id, request);
             return OkApi(res, "Khóa tài khoản khách hàng thành công.");
         }
 
         // UC-10: PATCH /api/tai-khoan/{id}/mo-khoa (Quản lý)
-        [HttpPatch, Route("{id:guid}/mo-khoa")]
+        [HttpPatch, Route("{id:int}/mo-khoa")]
         [JwtAuthorize(Roles = "QuanLy")]
-        public async Task<IHttpActionResult> MoKhoa(Guid id)
+        public async Task<IHttpActionResult> MoKhoa(int id)
         {
             var res = await _service.MoKhoaAsync(CurrentUserId.Value, id);
             return OkApi(res, "Mở khóa tài khoản khách hàng thành công.");

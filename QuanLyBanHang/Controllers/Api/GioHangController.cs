@@ -36,16 +36,16 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-31: PUT /api/gio-hang/san-pham/{sanPhamId}
-        [HttpPut, Route("san-pham/{sanPhamId:guid}")]
-        public async Task<IHttpActionResult> SuaSoLuong(Guid sanPhamId, [FromBody] SuaSoLuongGioRequest request)
+        [HttpPut, Route("san-pham/{sanPhamId:int}")]
+        public async Task<IHttpActionResult> SuaSoLuong(int sanPhamId, [FromBody] SuaSoLuongGioRequest request)
         {
             var res = await _service.SuaSoLuongAsync(CurrentUserId.Value, sanPhamId, request);
             return OkApi(res, "Cập nhật số lượng giỏ hàng thành công.");
         }
 
         // UC-32: DELETE /api/gio-hang/san-pham/{sanPhamId}
-        [HttpDelete, Route("san-pham/{sanPhamId:guid}")]
-        public async Task<IHttpActionResult> XoaSanPham(Guid sanPhamId)
+        [HttpDelete, Route("san-pham/{sanPhamId:int}")]
+        public async Task<IHttpActionResult> XoaSanPham(int sanPhamId)
         {
             var res = await _service.XoaSanPhamAsync(CurrentUserId.Value, sanPhamId);
             return OkApi(res, "Đã xóa sản phẩm khỏi giỏ hàng.");
@@ -60,16 +60,16 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-33: POST /api/gio-hang/yeu-thich/{sanPhamId}
-        [HttpPost, Route("yeu-thich/{sanPhamId:guid}")]
-        public async Task<IHttpActionResult> ThemYeuThich(Guid sanPhamId)
+        [HttpPost, Route("yeu-thich/{sanPhamId:int}")]
+        public async Task<IHttpActionResult> ThemYeuThich(int sanPhamId)
         {
             await _service.ThemYeuThichAsync(CurrentUserId.Value, sanPhamId);
             return OkApi<object>(null, "Đã thêm sản phẩm vào danh sách yêu thích.");
         }
 
         // UC-33: DELETE /api/gio-hang/yeu-thich/{sanPhamId}
-        [HttpDelete, Route("yeu-thich/{sanPhamId:guid}")]
-        public async Task<IHttpActionResult> XoaYeuThich(Guid sanPhamId)
+        [HttpDelete, Route("yeu-thich/{sanPhamId:int}")]
+        public async Task<IHttpActionResult> XoaYeuThich(int sanPhamId)
         {
             await _service.XoaYeuThichAsync(CurrentUserId.Value, sanPhamId);
             return OkApi<object>(null, "Đã bỏ sản phẩm khỏi danh sách yêu thích.");

@@ -6,7 +6,7 @@ namespace QuanLyBanHang.Models.DTOs.MaGiamGia
     // UC-45, UC-46, UC-47
     public class MaGiamGiaResponse
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string Ma { get; set; }
         public string MoTa { get; set; }
         public string Loai { get; set; }

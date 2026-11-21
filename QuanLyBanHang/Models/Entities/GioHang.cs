@@ -14,8 +14,8 @@ namespace QuanLyBanHang.Models.Entities
             ChiTietGioHangs = new HashSet<ChiTietGioHang>();
         }
 
-        public Guid Id { get; set; }
-        public Guid TaiKhoanId { get; set; }
+        public int Id { get; set; }
+        public int TaiKhoanId { get; set; }
 
         public virtual TaiKhoan TaiKhoan { get; set; }
         public virtual ICollection<ChiTietGioHang> ChiTietGioHangs { get; set; }

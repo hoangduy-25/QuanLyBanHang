@@ -22,14 +22,14 @@ namespace QuanLyBanHang.Controllers.Api
             UnitOfWork = new UnitOfWork(new QuanLyBanHangDbContext());
         }
 
-        protected Guid? CurrentUserId
+        protected int? CurrentUserId
         {
             get
             {
                 var principal = RequestContext != null ? RequestContext.Principal as ClaimsPrincipal : null;
                 var sub = principal != null ? principal.FindFirst(ClaimTypes.NameIdentifier) : null;
-                Guid id;
-                return (sub != null && Guid.TryParse(sub.Value, out id)) ? (Guid?)id : null;
+                int id;
+                return (sub != null && int.TryParse(sub.Value, out id)) ? (int?)id : null;
             }
         }
 

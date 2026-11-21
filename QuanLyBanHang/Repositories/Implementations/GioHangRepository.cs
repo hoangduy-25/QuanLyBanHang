@@ -13,7 +13,7 @@ namespace QuanLyBanHang.Repositories.Implementations
     {
         public GioHangRepository(QuanLyBanHangDbContext context) : base(context) { }
 
-        public Task<GioHang> GetByTaiKhoanIdWithDetailsAsync(Guid taiKhoanId)
+        public Task<GioHang> GetByTaiKhoanIdWithDetailsAsync(int taiKhoanId)
         {
             return DbSet
                 .Include(g => g.ChiTietGioHangs.Select(ct => ct.SanPham))
@@ -22,7 +22,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 .FirstOrDefaultAsync(g => g.TaiKhoanId == taiKhoanId);
         }
 
-        public Task<ChiTietGioHang> GetChiTietAsync(Guid gioHangId, Guid sanPhamId)
+        public Task<ChiTietGioHang> GetChiTietAsync(int gioHangId, int sanPhamId)
         {
             return Context.ChiTietGioHangs
                 .FirstOrDefaultAsync(ct => ct.GioHangId == gioHangId && ct.SanPhamId == sanPhamId);
@@ -38,7 +38,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             Context.ChiTietGioHangs.Remove(chiTiet);
         }
 
-        public async Task RemoveAllBySanPhamIdAsync(Guid sanPhamId)
+        public async Task RemoveAllBySanPhamIdAsync(int sanPhamId)
         {
             var cartItems = await Context.ChiTietGioHangs.Where(ct => ct.SanPhamId == sanPhamId).ToListAsync();
             if (cartItems.Any())
@@ -49,7 +49,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 Context.YeuThichSanPhams.RemoveRange(wishItems);
         }
 
-        public Task<List<YeuThichSanPham>> GetYeuThichByTaiKhoanAsync(Guid taiKhoanId)
+        public Task<List<YeuThichSanPham>> GetYeuThichByTaiKhoanAsync(int taiKhoanId)
         {
             return Context.YeuThichSanPhams.AsNoTracking()
                 .Include(yt => yt.SanPham)
@@ -59,7 +59,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 .ToListAsync();
         }
 
-        public Task<YeuThichSanPham> GetYeuThichAsync(Guid taiKhoanId, Guid sanPhamId)
+        public Task<YeuThichSanPham> GetYeuThichAsync(int taiKhoanId, int sanPhamId)
         {
             return Context.YeuThichSanPhams
                 .FirstOrDefaultAsync(yt => yt.TaiKhoanId == taiKhoanId && yt.SanPhamId == sanPhamId);

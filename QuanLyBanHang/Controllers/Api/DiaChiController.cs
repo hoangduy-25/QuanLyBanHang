@@ -36,24 +36,24 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-07: PUT /api/dia-chi/{id}
-        [HttpPut, Route("{id:guid}")]
-        public async Task<IHttpActionResult> SuaDiaChi(Guid id, [FromBody] TaoSuaDiaChiRequest request)
+        [HttpPut, Route("{id:int}")]
+        public async Task<IHttpActionResult> SuaDiaChi(int id, [FromBody] TaoSuaDiaChiRequest request)
         {
             var res = await _service.SuaDiaChiAsync(CurrentUserId.Value, id, request);
             return OkApi(res, "Cập nhật địa chỉ nhận hàng thành công.");
         }
 
         // UC-07: DELETE /api/dia-chi/{id}
-        [HttpDelete, Route("{id:guid}")]
-        public async Task<IHttpActionResult> XoaDiaChi(Guid id)
+        [HttpDelete, Route("{id:int}")]
+        public async Task<IHttpActionResult> XoaDiaChi(int id)
         {
             await _service.XoaDiaChiAsync(CurrentUserId.Value, id);
             return OkApi<object>(null, "Xóa địa chỉ nhận hàng thành công.");
         }
 
         // UC-07: PATCH /api/dia-chi/{id}/mac-dinh
-        [HttpPatch, Route("{id:guid}/mac-dinh")]
-        public async Task<IHttpActionResult> DatMacDinh(Guid id)
+        [HttpPatch, Route("{id:int}/mac-dinh")]
+        public async Task<IHttpActionResult> DatMacDinh(int id)
         {
             var res = await _service.DatMacDinhAsync(CurrentUserId.Value, id);
             return OkApi(res, "Đã đặt làm địa chỉ mặc định.");

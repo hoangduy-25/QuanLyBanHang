@@ -52,7 +52,7 @@ namespace QuanLyBanHang.Models.DTOs.XacThuc
     {
         public string AccessToken { get; set; }
         public DateTimeOffset ExpiresAt { get; set; }
-        public Guid TaiKhoanId { get; set; }
+        public int TaiKhoanId { get; set; }
         public string HoTen { get; set; }
         public string Email { get; set; }
         public string VaiTro { get; set; }

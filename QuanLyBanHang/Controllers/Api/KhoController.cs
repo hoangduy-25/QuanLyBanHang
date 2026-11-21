@@ -44,8 +44,8 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-27: PATCH /api/kho/{id}/nguong-toi-thieu
-        [HttpPatch, Route("{id:guid}/nguong-toi-thieu")]
-        public async Task<IHttpActionResult> DatNguongToiThieu(Guid id, [FromBody] DatNguongToiThieuRequest request)
+        [HttpPatch, Route("{id:int}/nguong-toi-thieu")]
+        public async Task<IHttpActionResult> DatNguongToiThieu(int id, [FromBody] DatNguongToiThieuRequest request)
         {
             var res = await _service.DatNguongToiThieuAsync(id, request);
             return OkApi(res, "Cập nhật ngưỡng tồn kho tối thiểu thành công.");

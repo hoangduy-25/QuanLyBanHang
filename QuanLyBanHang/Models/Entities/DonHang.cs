@@ -24,9 +24,9 @@ namespace QuanLyBanHang.Models.Entities
             DanhGias = new HashSet<DanhGia>();
         }
 
-        public Guid Id { get; set; }
-        public Guid TaiKhoanId { get; set; }
-        public Guid? MaGiamGiaId { get; set; }
+        public int Id { get; set; }
+        public int TaiKhoanId { get; set; }
+        public int? MaGiamGiaId { get; set; }
         public string MaDon { get; set; }
         public DateTimeOffset NgayDat { get; set; }
         public string TrangThai { get; set; }

@@ -31,12 +31,12 @@ namespace QuanLyBanHang.Repositories.Implementations
             return q.OrderBy(d => d.Ten).ToListAsync();
         }
 
-        public Task<DanhMuc> GetActiveByIdAsync(Guid id)
+        public Task<DanhMuc> GetActiveByIdAsync(int id)
         {
             return DbSet.FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted);
         }
 
-        public Task<bool> ExistsTenAsync(string ten, Guid? excludeId = null)
+        public Task<bool> ExistsTenAsync(string ten, int? excludeId = null)
         {
             var normalized = (ten ?? string.Empty).Trim().ToLower();
             return DbSet.AnyAsync(d =>
@@ -45,7 +45,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 (!excludeId.HasValue || d.Id != excludeId.Value));
         }
 
-        public Task<int> CountSanPhamActiveAsync(Guid danhMucId)
+        public Task<int> CountSanPhamActiveAsync(int danhMucId)
         {
             return Context.SanPhams.CountAsync(sp => sp.DanhMucId == danhMucId && !sp.IsDeleted);
         }

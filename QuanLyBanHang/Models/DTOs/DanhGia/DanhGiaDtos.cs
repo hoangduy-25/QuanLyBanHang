@@ -7,7 +7,7 @@ namespace QuanLyBanHang.Models.DTOs.DanhGia
     // UC-51 & UC-52: GET /api/danh-gia & /api/danh-gia/loc
     public class DanhGiaFilterQuery : PaginationQuery
     {
-        public Guid? SanPhamId { get; set; }
+        public int? SanPhamId { get; set; }
         [Range(1, 5)]
         public int? SoSao { get; set; }
         public bool? CoHinhAnh { get; set; }
@@ -18,8 +18,8 @@ namespace QuanLyBanHang.Models.DTOs.DanhGia
 
     public class PhanHoiDanhGiaResponse
     {
-        public Guid Id { get; set; }
-        public Guid TaiKhoanId { get; set; }
+        public int Id { get; set; }
+        public int TaiKhoanId { get; set; }
         public string TenNguoiTraLoi { get; set; }
         public string NoiDung { get; set; }
         public DateTimeOffset NgayTao { get; set; }
@@ -28,12 +28,12 @@ namespace QuanLyBanHang.Models.DTOs.DanhGia
 
     public class DanhGiaResponse
     {
-        public Guid Id { get; set; }
-        public Guid TaiKhoanId { get; set; }
+        public int Id { get; set; }
+        public int TaiKhoanId { get; set; }
         public string TenNguoiDanhGia { get; set; }
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
         public string TenSanPham { get; set; }
-        public Guid DonHangId { get; set; }
+        public int DonHangId { get; set; }
         public int SoSao { get; set; }
         public string NoiDung { get; set; }
         public string HinhAnh { get; set; }
@@ -49,10 +49,10 @@ namespace QuanLyBanHang.Models.DTOs.DanhGia
     public class TaoDanhGiaRequest
     {
         [Required]
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
 
         [Required]
-        public Guid DonHangId { get; set; }
+        public int DonHangId { get; set; }
 
         [Range(1, 5, ErrorMessage = "Số sao đánh giá phải từ 1 đến 5.")]
         public int SoSao { get; set; }
@@ -82,7 +82,7 @@ namespace QuanLyBanHang.Models.DTOs.DanhGia
     // UC-55: POST /api/danh-gia/{id}/thich
     public class ThichDanhGiaResponse
     {
-        public Guid DanhGiaId { get; set; }
+        public int DanhGiaId { get; set; }
         public bool DaThich { get; set; }
         public int SoLuotThich { get; set; }
     }

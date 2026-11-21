@@ -8,9 +8,9 @@ namespace QuanLyBanHang.Models.Entities
     /// </summary>
     public class ChiTietDonHang
     {
-        public Guid Id { get; set; }
-        public Guid DonHangId { get; set; }
-        public Guid SanPhamId { get; set; }
+        public int Id { get; set; }
+        public int DonHangId { get; set; }
+        public int SanPhamId { get; set; }
         public decimal DonGia { get; set; }
         public int SoLuong { get; set; }
         public decimal ThanhTien { get; set; }

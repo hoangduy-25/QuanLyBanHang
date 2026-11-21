@@ -46,36 +46,36 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-54: PUT /api/danh-gia/{id} (Khách hàng)
-        [HttpPut, Route("{id:guid}")]
+        [HttpPut, Route("{id:int}")]
         [JwtAuthorize(Roles = "KhachHang")]
-        public async Task<IHttpActionResult> Sua(Guid id, [FromBody] SuaDanhGiaRequest request)
+        public async Task<IHttpActionResult> Sua(int id, [FromBody] SuaDanhGiaRequest request)
         {
             var res = await _service.SuaAsync(CurrentUserId.Value, id, request);
             return OkApi(res, "Chỉnh sửa đánh giá thành công.");
         }
 
         // UC-55: POST /api/danh-gia/{id}/thich (Khách hàng, Nhân viên, Quản lý)
-        [HttpPost, Route("{id:guid}/thich")]
+        [HttpPost, Route("{id:int}/thich")]
         [JwtAuthorize(Roles = "KhachHang,NhanVien,QuanLy")]
-        public async Task<IHttpActionResult> Thich(Guid id)
+        public async Task<IHttpActionResult> Thich(int id)
         {
             var res = await _service.ThichAsync(CurrentUserId.Value, id);
             return OkApi(res);
         }
 
         // UC-56: DELETE /api/danh-gia/{id} (Khách hàng, Quản lý)
-        [HttpDelete, Route("{id:guid}")]
+        [HttpDelete, Route("{id:int}")]
         [JwtAuthorize(Roles = "KhachHang,QuanLy")]
-        public async Task<IHttpActionResult> Xoa(Guid id, [FromBody] XoaDanhGiaRequest request = null)
+        public async Task<IHttpActionResult> Xoa(int id, [FromBody] XoaDanhGiaRequest request = null)
         {
             await _service.XoaAsync(CurrentUserId.Value, CurrentUserRole, id, request);
             return OkApi<object>(null, "Xóa đánh giá thành công.");
         }
 
         // UC-57: POST /api/danh-gia/{id}/tra-loi (Nhân viên, Quản lý)
-        [HttpPost, Route("{id:guid}/tra-loi")]
+        [HttpPost, Route("{id:int}/tra-loi")]
         [JwtAuthorize(Roles = "NhanVien,QuanLy")]
-        public async Task<IHttpActionResult> TraLoi(Guid id, [FromBody] TraLoiDanhGiaRequest request)
+        public async Task<IHttpActionResult> TraLoi(int id, [FromBody] TraLoiDanhGiaRequest request)
         {
             var res = await _service.TraLoiAsync(CurrentUserId.Value, id, request);
             return OkApi(res, "Phản hồi đánh giá thành công.");

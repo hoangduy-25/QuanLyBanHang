@@ -8,7 +8,7 @@ namespace QuanLyBanHang.Models.DTOs.SanPham
     public class SanPhamFilterQuery : PaginationQuery
     {
         public string TuKhoa { get; set; }
-        public Guid? DanhMucId { get; set; }
+        public int? DanhMucId { get; set; }
         public decimal? GiaTu { get; set; }
         public decimal? GiaDen { get; set; }
         public bool? HienThi { get; set; }
@@ -17,8 +17,8 @@ namespace QuanLyBanHang.Models.DTOs.SanPham
 
     public class SanPhamListItemResponse
     {
-        public Guid Id { get; set; }
-        public Guid DanhMucId { get; set; }
+        public int Id { get; set; }
+        public int DanhMucId { get; set; }
         public string TenDanhMuc { get; set; }
         public string MaSanPham { get; set; }
         public string Ten { get; set; }
@@ -43,7 +43,7 @@ namespace QuanLyBanHang.Models.DTOs.SanPham
     public class TaoSanPhamRequest
     {
         [Required(ErrorMessage = "Vui lòng chọn danh mục.")]
-        public Guid DanhMucId { get; set; }
+        public int DanhMucId { get; set; }
 
         [Required(ErrorMessage = "Mã sản phẩm không được để trống.")]
         [StringLength(50)]
@@ -75,7 +75,7 @@ namespace QuanLyBanHang.Models.DTOs.SanPham
     public class SuaSanPhamRequest
     {
         [Required(ErrorMessage = "Vui lòng chọn danh mục.")]
-        public Guid DanhMucId { get; set; }
+        public int DanhMucId { get; set; }
 
         [Required(ErrorMessage = "Mã sản phẩm không được để trống.")]
         [StringLength(50)]

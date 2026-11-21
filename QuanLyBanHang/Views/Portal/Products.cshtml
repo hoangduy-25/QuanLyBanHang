@@ -1,0 +1,48 @@
+﻿@{ Layout = "~/Views/Shared/_PortalLayout.cshtml"; ViewBag.Title = "Sản phẩm & Danh mục"; }
+<div class="hc-card p-3 mb-3 d-flex justify-content-between align-items-center">
+    <div class="d-flex gap-1">
+        <button class="hc-cat-pill active" onclick="catTab('sp', this)">Sản phẩm</button>
+        <button class="hc-cat-pill" onclick="catTab('dm', this)">Danh mục</button>
+    </div>
+    <button class="btn hc-btn-primary btn-sm px-3" onclick="addCatalogItem()">+ Thêm mới</button>
+</div>
+<div id="cat-box" class="hc-card p-3 table-responsive">Đang tải...</div>
+@section scripts {
+<script>
+let curTab = "sp";
+async function catTab(t, btn) {
+    curTab = t;
+    if (btn) { btn.parentElement.querySelectorAll(".hc-cat-pill").forEach(b => b.classList.remove("active")); btn.classList.add("active"); }
+    const box = document.getElementById("cat-box");
+    if (t === "sp") {
+        const res = await HCShopApi.request("/api/san-pham?Page=1&PageSize=50");
+        box.innerHTML = `<table class="table table-sm align-middle mb-0"><thead><tr><th>Sản phẩm</th><th>Danh mục</th><th>Giá bán</th><th>Tồn kho</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>` +
+            res.data.items.map(s => `<tr><td><strong>${s.ten}</strong><div class="small text-muted">${s.maSanPham}</div></td><td>${s.tenDanhMuc}</td><td>${HCShopApi.formatVnd(s.giaBan)}</td><td>${s.soLuongTon}</td><td>${s.hienThi ? '<span class="badge hc-badge-success">Đang bán</span>' : '<span class="badge hc-badge-neutral">Đang ẩn</span>'}</td>
+            <td class="d-flex gap-1"><button class="btn btn-light border btn-sm hc-pill" onclick="toggleSp('${s.id}', ${!s.hienThi})">${s.hienThi ? "Ẩn" : "Hiện"}</button><button class="btn btn-light border text-danger btn-sm hc-pill" onclick="delSp('${s.id}')">Xóa</button></td></tr>`).join("") + `</tbody></table>`;
+    } else {
+        const res = await HCShopApi.request("/api/danh-muc");
+        box.innerHTML = `<table class="table table-sm align-middle mb-0"><thead><tr><th>Danh mục</th><th>Số SP</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>` +
+            res.data.map(d => `<tr><td><strong>${d.ten}</strong></td><td>${d.soSanPham}</td><td>${d.hienThi ? '<span class="badge hc-badge-success">Hiển thị</span>' : '<span class="badge hc-badge-neutral">Đang ẩn</span>'}</td>
+            <td class="d-flex gap-1"><button class="btn btn-light border btn-sm hc-pill" onclick="toggleDm('${d.id}', ${!d.hienThi})">${d.hienThi ? "Ẩn" : "Hiện"}</button><button class="btn btn-light border text-danger btn-sm hc-pill" onclick="delDm('${d.id}')">Xóa</button></td></tr>`).join("") + `</tbody></table>`;
+    }
+}
+async function toggleSp(id, st) { await HCShopApi.request("/api/san-pham/" + id + "/an-hien", { method: "PATCH", body: JSON.stringify({ hienThi: st }) }); catTab("sp"); }
+async function delSp(id) { if (!confirm("Xóa sản phẩm?")) return; try { await HCShopApi.request("/api/san-pham/" + id, { method: "DELETE" }); catTab("sp"); } catch (e) { alert(e.message); } }
+async function toggleDm(id, st) { await HCShopApi.request("/api/danh-muc/" + id + "/an-hien", { method: "PATCH", body: JSON.stringify({ hienThi: st }) }); catTab("dm"); }
+async function delDm(id) { if (!confirm("Xóa danh mục?")) return; try { await HCShopApi.request("/api/danh-muc/" + id, { method: "DELETE" }); catTab("dm"); } catch (e) { alert(e.message); } }
+async function addCatalogItem() {
+    if (curTab === "dm") {
+        const ten = prompt("Tên danh mục mới:"); if (!ten) return;
+        await HCShopApi.request("/api/danh-muc", { method: "POST", body: JSON.stringify({ ten, moTa: prompt("Mô tả:"), hienThi: true }) });
+        catTab("dm");
+    } else {
+        const dms = (await HCShopApi.request("/api/danh-muc")).data;
+        if (!dms.length) { alert("Cần tạo ít nhất 1 danh mục trước."); return; }
+        const ma = prompt("Mã sản phẩm:"); if (!ma) return;
+        await HCShopApi.request("/api/san-pham", { method: "POST", body: JSON.stringify({ danhMucId: dms[0].id, maSanPham: ma, ten: prompt("Tên sản phẩm:"), giaBan: parseFloat(prompt("Giá bán:") || "100000"), soLuongBanDau: parseInt(prompt("Tồn ban đầu:") || "10"), nguongToiThieu: 5, moTa: "", hienThi: true }) });
+        catTab("sp");
+    }
+}
+document.addEventListener("DOMContentLoaded", () => catTab("sp"));
+</script>
+}

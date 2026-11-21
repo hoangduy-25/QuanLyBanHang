@@ -22,7 +22,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-01: Đăng ký tài khoản khách hàng
-        public async Task<Guid> DangKyAsync(DangKyRequest request)
+        public async Task<int> DangKyAsync(DangKyRequest request)
         {
             if (request == null)
                 throw new BadRequestException("Dữ liệu đăng ký không hợp lệ.");
@@ -175,7 +175,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-04: Đổi mật khẩu
-        public async Task DoiMatKhauAsync(Guid taiKhoanId, DoiMatKhauRequest request)
+        public async Task DoiMatKhauAsync(int taiKhoanId, DoiMatKhauRequest request)
         {
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
@@ -195,7 +195,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-05: Điền / cập nhật câu hỏi bảo mật
-        public async Task CapNhatCauHoiBaoMatAsync(Guid taiKhoanId, CapNhatCauHoiBaoMatRequest request)
+        public async Task CapNhatCauHoiBaoMatAsync(int taiKhoanId, CapNhatCauHoiBaoMatRequest request)
         {
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)

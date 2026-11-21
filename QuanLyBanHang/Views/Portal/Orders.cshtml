@@ -1,0 +1,59 @@
+﻿@{ Layout = "~/Views/Shared/_PortalLayout.cshtml"; ViewBag.Title = "Quản lý đơn hàng"; }
+<div class="hc-card p-3 mb-3 d-flex flex-wrap gap-1" id="po-tabs">
+    <button class="hc-cat-pill active" onclick="poFilter('', this)">Tất cả</button>
+    <button class="hc-cat-pill" onclick="poFilter('ChoXacNhan', this)">Chờ xác nhận</button>
+    <button class="hc-cat-pill" onclick="poFilter('DaXacNhan', this)">Đã xác nhận</button>
+    <button class="hc-cat-pill" onclick="poFilter('DangChuanBi', this)">Đang chuẩn bị</button>
+    <button class="hc-cat-pill" onclick="poFilter('DangGiao', this)">Đang giao</button>
+    <button class="hc-cat-pill" onclick="poFilter('HoanThanh', this)">Hoàn thành</button>
+    <button class="hc-cat-pill" onclick="poFilter('DaHuy', this)">Đã hủy</button>
+</div>
+<div class="row g-3">
+    <div class="col-lg-5" id="po-list"></div>
+    <div class="col-lg-7" id="po-detail"><div class="hc-card p-5 text-center text-muted">Chọn đơn hàng để xử lý.</div></div>
+</div>
+@section scripts {
+<script>
+let poStatus = "";
+const isStaff = () => (HCShopApi.getUser() || {}).vaiTro === "NhanVien";
+function poFilter(st, btn) { poStatus = st; document.querySelectorAll("#po-tabs .hc-cat-pill").forEach(b => b.classList.remove("active")); btn.classList.add("active"); loadPo(); }
+async function loadPo() {
+    const res = await HCShopApi.request("/api/don-hang?Page=1&PageSize=30" + (poStatus ? "&TrangThai=" + poStatus : ""));
+    document.getElementById("po-list").innerHTML = !res.data.items.length ? "<div class='hc-card p-4 text-muted'>Không có đơn hàng.</div>" :
+        res.data.items.map(o => `<div class="hc-card p-3 mb-2" style="cursor:pointer" onclick="openPo('${o.id}')">
+            <div class="d-flex justify-content-between"><strong>${o.maDon}</strong>${HCShopApi.statusBadge(o.trangThai)}</div>
+            <div class="small text-muted">${o.tenKhachHang} • ${new Date(o.ngayDat).toLocaleString("vi-VN")}</div>
+            <div class="fw-bold mt-1">${HCShopApi.formatVnd(o.tongThanhToan)}</div>
+        </div>`).join("");
+}
+async function openPo(id) {
+    const res = await HCShopApi.request("/api/don-hang/" + id);
+    const d = res.data;
+    const nextMap = { DaXacNhan: "DangChuanBi", DangChuanBi: "DangGiao", DangGiao: "HoanThanh" };
+    let actions = "";
+    if (isStaff()) {
+        if (d.trangThai === "ChoXacNhan") {
+            actions = `<button class="btn hc-btn-primary btn-sm px-3" onclick="staffConfirm('${d.id}')">Xác nhận đơn</button>
+                       <button class="btn btn-outline-danger btn-sm hc-pill" onclick="staffReject('${d.id}')">Từ chối / Hủy đơn</button>`;
+        } else if (nextMap[d.trangThai]) {
+            actions = `<input id="poNote" class="form-control form-control-sm hc-pill mb-2" placeholder="Ghi chú vận hành (tùy chọn)..." />
+                       <button class="btn hc-btn-primary btn-sm px-3" onclick="staffStep('${d.id}','${nextMap[d.trangThai]}')">Chuyển sang ${nextMap[d.trangThai]}</button>`;
+        }
+    } else {
+        actions = `<span class="badge hc-badge-neutral">Chế độ chỉ xem (Quản lý)</span>`;
+    }
+    document.getElementById("po-detail").innerHTML = `<div class="hc-card p-4">
+        <div class="d-flex justify-content-between mb-2"><h5 class="fw-bold mb-0">${d.maDon}</h5>${HCShopApi.statusBadge(d.trangThai)}</div>
+        <div class="small text-muted mb-3">Khách: <strong>${d.tenNguoiNhan}</strong> (${d.soDienThoaiNhan})<br/>${d.diaChiGiaoHang}</div>
+        <div class="mb-3 d-flex flex-wrap gap-2">${actions}</div>
+        <h6 class="fw-bold">Sản phẩm</h6>
+        ${d.chiTiets.map(c => `<div class="d-flex justify-content-between border-bottom py-1 small"><span>${c.tenSanPham} × ${c.soLuong}</span><strong>${HCShopApi.formatVnd(c.thanhTien)}</strong></div>`).join("")}
+        <div class="d-flex justify-content-between fw-bold mt-2"><span>Tổng thanh toán</span><span>${HCShopApi.formatVnd(d.tongThanhToan)}</span></div>
+    </div>`;
+}
+async function staffConfirm(id) { await HCShopApi.request("/api/don-hang/" + id + "/xac-nhan", { method: "PATCH" }); loadPo(); openPo(id); }
+async function staffReject(id) { const r = prompt("Lý do từ chối/hủy:"); if (!r) return; await HCShopApi.request("/api/don-hang/" + id + "/huy", { method: "PATCH", body: JSON.stringify({ lyDoHuy: r }) }); loadPo(); openPo(id); }
+async function staffStep(id, next) { const note = (document.getElementById("poNote") || {}).value || ""; await HCShopApi.request("/api/don-hang/" + id + "/trang-thai", { method: "PATCH", body: JSON.stringify({ trangThaiMoi: next, ghiChu: note }) }); loadPo(); openPo(id); }
+document.addEventListener("DOMContentLoaded", loadPo);
+</script>
+}

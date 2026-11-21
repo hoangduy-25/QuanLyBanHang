@@ -37,9 +37,9 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-47: GET /api/ma-giam-gia/{id} (Khách hàng, Quản lý)
-        [HttpGet, Route("{id:guid}")]
+        [HttpGet, Route("{id:int}")]
         [JwtAuthorize(Roles = "KhachHang,QuanLy")]
-        public async Task<IHttpActionResult> XemChiTiet(Guid id)
+        public async Task<IHttpActionResult> XemChiTiet(int id)
         {
             var res = await _service.XemChiTietAsync(id, IsManager);
             return OkApi(res);
@@ -55,18 +55,18 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-49: PUT /api/ma-giam-gia/{id} (Quản lý)
-        [HttpPut, Route("{id:guid}")]
+        [HttpPut, Route("{id:int}")]
         [JwtAuthorize(Roles = "QuanLy")]
-        public async Task<IHttpActionResult> Sua(Guid id, [FromBody] SuaMaGiamGiaRequest request)
+        public async Task<IHttpActionResult> Sua(int id, [FromBody] SuaMaGiamGiaRequest request)
         {
             var res = await _service.SuaAsync(id, request);
             return OkApi(res, "Cập nhật mã giảm giá thành công.");
         }
 
         // UC-50: DELETE /api/ma-giam-gia/{id} (Quản lý)
-        [HttpDelete, Route("{id:guid}")]
+        [HttpDelete, Route("{id:int}")]
         [JwtAuthorize(Roles = "QuanLy")]
-        public async Task<IHttpActionResult> Xoa(Guid id)
+        public async Task<IHttpActionResult> Xoa(int id)
         {
             var msg = await _service.XoaAsync(id);
             return OkApi<object>(null, msg);

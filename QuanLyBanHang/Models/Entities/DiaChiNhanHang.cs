@@ -7,8 +7,8 @@ namespace QuanLyBanHang.Models.Entities
     /// </summary>
     public class DiaChiNhanHang
     {
-        public Guid Id { get; set; }
-        public Guid TaiKhoanId { get; set; }
+        public int Id { get; set; }
+        public int TaiKhoanId { get; set; }
         public string TenNguoiNhan { get; set; }
         public string SoDienThoai { get; set; }
         public string TinhThanh { get; set; }

@@ -34,7 +34,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-25: Nhập hàng tăng số lượng tồn kho
-        public async Task<TonKhoResponse> NhapTangAsync(Guid quanLyId, NhapTangKhoRequest request)
+        public async Task<TonKhoResponse> NhapTangAsync(int quanLyId, NhapTangKhoRequest request)
         {
             var tk = await _uow.Khos.GetBySanPhamIdAsync(request.SanPhamId);
             if (tk == null)
@@ -73,7 +73,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-26: Điều chỉnh giảm tồn kho
-        public async Task<TonKhoResponse> DieuChinhGiamAsync(Guid quanLyId, DieuChinhGiamKhoRequest request)
+        public async Task<TonKhoResponse> DieuChinhGiamAsync(int quanLyId, DieuChinhGiamKhoRequest request)
         {
             var tk = await _uow.Khos.GetBySanPhamIdAsync(request.SanPhamId);
             if (tk == null)
@@ -113,7 +113,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-27: Thiết lập ngưỡng tồn kho tối thiểu
-        public async Task<TonKhoResponse> DatNguongToiThieuAsync(Guid tonKhoId, DatNguongToiThieuRequest request)
+        public async Task<TonKhoResponse> DatNguongToiThieuAsync(int tonKhoId, DatNguongToiThieuRequest request)
         {
             var tk = await _uow.Khos.GetByIdAsync(tonKhoId);
             if (tk == null)
@@ -143,7 +143,7 @@ namespace QuanLyBanHang.Services.Implementations
                 {
                     Id = b.Id,
                     TonKhoId = b.TonKhoId,
-                    SanPhamId = b.TonKho != null ? b.TonKho.SanPhamId : Guid.Empty,
+                    SanPhamId = b.TonKho != null ? b.TonKho.SanPhamId : 0,
                     MaSanPham = b.TonKho != null && b.TonKho.SanPham != null ? b.TonKho.SanPham.MaSanPham : string.Empty,
                     TenSanPham = b.TonKho != null && b.TonKho.SanPham != null ? b.TonKho.SanPham.Ten : string.Empty,
                     DonHangId = b.DonHangId,

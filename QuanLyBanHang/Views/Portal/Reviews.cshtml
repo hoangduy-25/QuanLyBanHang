@@ -1,0 +1,43 @@
+﻿@{ Layout = "~/Views/Shared/_PortalLayout.cshtml"; ViewBag.Title = "Kiểm duyệt & Phản hồi đánh giá"; }
+<div class="hc-card p-3 mb-3 d-flex gap-1">
+    <button class="hc-cat-pill active" onclick="loadPr(null, this)">Tất cả</button>
+    <button class="hc-cat-pill" onclick="loadPr(false, this)">Chưa phản hồi</button>
+    <button class="hc-cat-pill" onclick="loadPr(true, this)">Đã phản hồi</button>
+</div>
+<div id="pr-list">Đang tải...</div>
+@section scripts {
+<script>
+const isMgr = () => (HCShopApi.getUser() || {}).vaiTro === "QuanLy";
+async function loadPr(coPh, btn) {
+    if (btn) { btn.parentElement.querySelectorAll(".hc-cat-pill").forEach(b => b.classList.remove("active")); btn.classList.add("active"); }
+    let url = "/api/danh-gia/loc?Page=1&PageSize=30";
+    if (coPh !== null) url += "&CoPhanHoi=" + coPh;
+    const res = await HCShopApi.request(url);
+    document.getElementById("pr-list").innerHTML = !res.data.items.length ? "<div class='hc-card p-4 text-muted'>Không có đánh giá.</div>" :
+        res.data.items.map(r => `<div class="hc-card p-4 mb-3">
+            <div class="d-flex justify-content-between mb-1">
+                <strong>${r.tenNguoiDanhGia} — ${r.tenSanPham} (${"★".repeat(r.soSao)})</strong>
+                ${isMgr() ? `<button class="btn btn-outline-danger btn-sm hc-pill" onclick="delRev('${r.id}')">Gỡ đánh giá</button>` : ""}
+            </div>
+            <p class="mb-2">${r.noiDung}</p>
+            <textarea id="rep-${r.id}" class="form-control mb-2" rows="2" placeholder="Nhập phản hồi từ cửa hàng...">${r.phanHoi ? r.phanHoi.noiDung : ""}</textarea>
+            <div class="d-flex flex-wrap gap-1">
+                <button class="btn btn-light border btn-sm hc-pill" onclick="document.getElementById('rep-${r.id}').value='Cảm ơn bạn đã tin tưởng và ủng hộ HCShop!'">Mẫu phản hồi #1</button>
+                <button class="btn btn-light border btn-sm hc-pill" onclick="document.getElementById('rep-${r.id}').value='HCShop rất xin lỗi vì trải nghiệm chưa tốt, chúng tôi sẽ liên hệ hỗ trợ ngay.'">Mẫu phản hồi #2</button>
+                <button class="btn hc-btn-primary btn-sm px-3 ms-auto" onclick="sendReply('${r.id}')">Gửi / Cập nhật phản hồi</button>
+            </div>
+        </div>`).join("");
+}
+async function sendReply(id) {
+    const noiDung = document.getElementById("rep-" + id).value.trim(); if (!noiDung) return;
+    await HCShopApi.request("/api/danh-gia/" + id + "/tra-loi", { method: "POST", body: JSON.stringify({ noiDung }) });
+    alert("Đã lưu phản hồi."); loadPr(null);
+}
+async function delRev(id) {
+    const lyDoXoa = prompt("Lý do gỡ đánh giá:"); if (!lyDoXoa) return;
+    await HCShopApi.request("/api/danh-gia/" + id, { method: "DELETE", body: JSON.stringify({ lyDoXoa }) });
+    loadPr(null);
+}
+document.addEventListener("DOMContentLoaded", () => loadPr(null));
+</script>
+}

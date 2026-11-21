@@ -16,8 +16,8 @@ namespace QuanLyBanHang.Models.Entities
             BienDongKhos = new HashSet<BienDongKho>();
         }
 
-        public Guid Id { get; set; }
-        public Guid SanPhamId { get; set; }
+        public int Id { get; set; }
+        public int SanPhamId { get; set; }
         public int SoLuongTon { get; set; }
         public int NguongToiThieu { get; set; }
 

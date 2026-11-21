@@ -51,7 +51,7 @@ namespace QuanLyBanHang.Services.Implementations
             return Map(entity, true);
         }
 
-        public async Task<DanhMucResponse> SuaAsync(Guid id, TaoSuaDanhMucRequest request)
+        public async Task<DanhMucResponse> SuaAsync(int id, TaoSuaDanhMucRequest request)
         {
             var entity = await _uow.DanhMucs.GetActiveByIdAsync(id);
             if (entity == null)
@@ -69,7 +69,7 @@ namespace QuanLyBanHang.Services.Implementations
             return Map(entity, true);
         }
 
-        public async Task XoaAsync(Guid id)
+        public async Task XoaAsync(int id)
         {
             var entity = await _uow.DanhMucs.GetActiveByIdAsync(id);
             if (entity == null)
@@ -85,7 +85,7 @@ namespace QuanLyBanHang.Services.Implementations
             await _uow.SaveChangesAsync();
         }
 
-        public async Task<DanhMucResponse> AnHienAsync(Guid id, AnHienDanhMucRequest request)
+        public async Task<DanhMucResponse> AnHienAsync(int id, AnHienDanhMucRequest request)
         {
             var entity = await _uow.DanhMucs.GetActiveByIdAsync(id);
             if (entity == null)

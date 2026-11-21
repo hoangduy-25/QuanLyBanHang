@@ -25,7 +25,7 @@ namespace QuanLyBanHang.Infrastructure.Auth
             }
         }
 
-        public static string GenerateToken(Guid taiKhoanId, string hoTen, string email, string vaiTro, DateTimeOffset expiresAt)
+        public static string GenerateToken(int taiKhoanId, string hoTen, string email, string vaiTro, DateTimeOffset expiresAt)
         {
             var header = new Dictionary<string, object>
             {

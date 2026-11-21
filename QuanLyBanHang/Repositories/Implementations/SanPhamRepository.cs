@@ -69,7 +69,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             };
         }
 
-        public Task<SanPham> GetDetailByIdAsync(Guid id, bool chiHienThi)
+        public Task<SanPham> GetDetailByIdAsync(int id, bool chiHienThi)
         {
             var q = DbSet
                 .Include(sp => sp.DanhMuc)
@@ -83,7 +83,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             return q.FirstOrDefaultAsync();
         }
 
-        public Task<bool> ExistsMaSanPhamAsync(string maSanPham, Guid? excludeId = null)
+        public Task<bool> ExistsMaSanPhamAsync(string maSanPham, int? excludeId = null)
         {
             var normalized = (maSanPham ?? string.Empty).Trim().ToLower();
             return DbSet.AnyAsync(sp =>
@@ -92,7 +92,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 (!excludeId.HasValue || sp.Id != excludeId.Value));
         }
 
-        public Task<bool> ExistsTenTrongDanhMucAsync(Guid danhMucId, string ten, Guid? excludeId = null)
+        public Task<bool> ExistsTenTrongDanhMucAsync(int danhMucId, string ten, int? excludeId = null)
         {
             var normalized = (ten ?? string.Empty).Trim().ToLower();
             return DbSet.AnyAsync(sp =>
@@ -102,7 +102,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 (!excludeId.HasValue || sp.Id != excludeId.Value));
         }
 
-        public Task<bool> HasDonHangAsync(Guid sanPhamId)
+        public Task<bool> HasDonHangAsync(int sanPhamId)
         {
             return Context.ChiTietDonHangs.AnyAsync(ct => ct.SanPhamId == sanPhamId);
         }

@@ -21,7 +21,7 @@ namespace QuanLyBanHang.Services.Implementations
             _uow = uow;
         }
 
-        public async Task<PagedResult<DanhGiaResponse>> XemDanhSachAsync(DanhGiaFilterQuery query, Guid? currentUserId, string vaiTro)
+        public async Task<PagedResult<DanhGiaResponse>> XemDanhSachAsync(DanhGiaFilterQuery query, int? currentUserId, string vaiTro)
         {
             var q = query ?? new DanhGiaFilterQuery();
 
@@ -46,13 +46,13 @@ namespace QuanLyBanHang.Services.Implementations
             };
         }
 
-        public Task<PagedResult<DanhGiaResponse>> LocAsync(DanhGiaFilterQuery query, Guid? currentUserId, string vaiTro)
+        public Task<PagedResult<DanhGiaResponse>> LocAsync(DanhGiaFilterQuery query, int? currentUserId, string vaiTro)
         {
             return XemDanhSachAsync(query, currentUserId, vaiTro);
         }
 
         // UC-53: Gửi đánh giá sản phẩm đã mua
-        public async Task<DanhGiaResponse> TaoAsync(Guid khachHangId, TaoDanhGiaRequest request)
+        public async Task<DanhGiaResponse> TaoAsync(int khachHangId, TaoDanhGiaRequest request)
         {
             ValidateReviewContent(request.NoiDung);
 
@@ -86,7 +86,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-54: Chỉnh sửa đánh giá của mình
-        public async Task<DanhGiaResponse> SuaAsync(Guid khachHangId, Guid danhGiaId, SuaDanhGiaRequest request)
+        public async Task<DanhGiaResponse> SuaAsync(int khachHangId, int danhGiaId, SuaDanhGiaRequest request)
         {
             ValidateReviewContent(request.NoiDung);
 
@@ -108,7 +108,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-55: Thích / bỏ thích đánh giá
-        public async Task<ThichDanhGiaResponse> ThichAsync(Guid nguoiDungId, Guid danhGiaId)
+        public async Task<ThichDanhGiaResponse> ThichAsync(int nguoiDungId, int danhGiaId)
         {
             var dg = await _uow.DanhGias.GetActiveDetailByIdAsync(danhGiaId);
             if (dg == null)
@@ -148,7 +148,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-56: Xóa đánh giá (Soft Delete)
-        public async Task XoaAsync(Guid nguoiDungId, string vaiTro, Guid danhGiaId, XoaDanhGiaRequest request)
+        public async Task XoaAsync(int nguoiDungId, string vaiTro, int danhGiaId, XoaDanhGiaRequest request)
         {
             var dg = await _uow.DanhGias.GetActiveDetailByIdAsync(danhGiaId);
             if (dg == null)
@@ -167,7 +167,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-57: Nhân viên / Quản lý trả lời hoặc cập nhật phản hồi đánh giá
-        public async Task<PhanHoiDanhGiaResponse> TraLoiAsync(Guid nguoiTraLoiId, Guid danhGiaId, TraLoiDanhGiaRequest request)
+        public async Task<PhanHoiDanhGiaResponse> TraLoiAsync(int nguoiTraLoiId, int danhGiaId, TraLoiDanhGiaRequest request)
         {
             var dg = await _uow.DanhGias.GetActiveDetailByIdAsync(danhGiaId);
             if (dg == null)
@@ -216,7 +216,7 @@ namespace QuanLyBanHang.Services.Implementations
                 throw new BadRequestException("Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.");
         }
 
-        private static DanhGiaResponse Map(DanhGia dg, Guid? currentUserId)
+        private static DanhGiaResponse Map(DanhGia dg, int? currentUserId)
         {
             var ph = dg.PhanHoiDanhGias != null ? dg.PhanHoiDanhGias.FirstOrDefault() : null;
             var likes = dg.ThichDanhGias != null ? dg.ThichDanhGias.ToList() : null;

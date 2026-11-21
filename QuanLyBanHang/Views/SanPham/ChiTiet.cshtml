@@ -1,0 +1,111 @@
+﻿@model QuanLyBanHang.Models.DTOs.SanPham.SanPhamChiTietResponse
+@{ ViewBag.Title = Model != null ? Model.Ten : "Chi tiết sản phẩm"; }
+<div class="mb-3">
+    <a href="@Url.Action("Index", "Home")" class="btn btn-light border btn-sm hc-pill px-3">&larr; Danh sách sản phẩm</a>
+</div>
+@if (Model == null)
+{
+    <div class="hc-card p-4 text-center text-muted">@ViewBag.ErrorMessage</div>
+}
+else
+{
+    <div class="hc-card p-4 mb-4">
+        <div class="row g-4">
+            <div class="col-md-5">
+                <div class="hc-product-img rounded-4" style="height:340px">
+                    @if (!string.IsNullOrWhiteSpace(Model.HinhAnh)) { <img src="@Model.HinhAnh" alt="@Model.Ten" /> }
+                    else { <span class="text-muted">@Model.MaSanPham</span> }
+                </div>
+            </div>
+            <div class="col-md-7 d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small text-muted">@Model.TenDanhMuc • @Model.MaSanPham</span>
+                    <span class="badge rounded-pill @(Model.ConHang ? "hc-badge-success" : "hc-badge-danger")">
+                        @(Model.ConHang ? "Còn hàng (" + Model.SoLuongTon + ")" : "Hết hàng")
+                    </span>
+                </div>
+                <h3 class="fw-bold mb-1">@Model.Ten</h3>
+                <div class="small text-muted mb-3">★ @Model.DiemTrungBinh (@Model.SoLuotDanhGia đánh giá)</div>
+                <h3 class="fw-bold mb-3">@string.Format("{0:N0} đ", Model.GiaBan)</h3>
+                <p class="text-muted mb-4">@Model.MoTa</p>
+                <div id="pd-alert" class="alert d-none"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-auto">
+                    <div class="input-group" style="width:130px">
+                        <button class="btn btn-light border" type="button" onclick="chgQty(-1)">-</button>
+                        <input id="pdQty" type="number" class="form-control text-center" value="1" min="1" max="@Model.SoLuongTon" />
+                        <button class="btn btn-light border" type="button" onclick="chgQty(1)">+</button>
+                    </div>
+                    <button class="btn hc-btn-primary px-4" @(Model.ConHang ? "" : "disabled") onclick="addCart('@Model.Id')">Thêm vào giỏ hàng</button>
+                    <button class="btn btn-light border hc-pill px-3" onclick="addWish('@Model.Id')">♥ Yêu thích</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hc-card p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h5 class="fw-bold mb-0">Đánh giá sản phẩm</h5>
+            <div class="d-flex flex-wrap gap-1" id="rev-filters">
+                <button class="hc-cat-pill active" onclick="loadReviews(null, null, null, this)">Tất cả</button>
+                <button class="hc-cat-pill" onclick="loadReviews(5, null, null, this)">5 sao</button>
+                <button class="hc-cat-pill" onclick="loadReviews(4, null, null, this)">4 sao</button>
+                <button class="hc-cat-pill" onclick="loadReviews(3, null, null, this)">3 sao</button>
+                <button class="hc-cat-pill" onclick="loadReviews(null, true, null, this)">Có hình ảnh</button>
+                <button class="hc-cat-pill" onclick="loadReviews(null, null, true, this)">Có phản hồi</button>
+            </div>
+        </div>
+        <div id="rev-list">Đang tải đánh giá...</div>
+    </div>
+}
+@section scripts {
+<script>
+const spId = "@(Model != null ? Model.Id.ToString() : "")";
+function chgQty(d) {
+    const el = document.getElementById("pdQty");
+    el.value = Math.max(1, (parseInt(el.value || "1") + d));
+}
+async function addCart(id) {
+    const box = document.getElementById("pd-alert");
+    try {
+        await HCShopApi.request("/api/gio-hang/san-pham", { method: "POST", body: JSON.stringify({ sanPhamId: parseInt(id), soLuong: parseInt(pdQty.value || "1") }) });
+        box.className = "alert alert-success"; box.textContent = "Đã thêm sản phẩm vào giỏ hàng.";
+        HCShopApi.refreshCartBadge();
+    } catch (e) { box.className = "alert alert-danger"; box.textContent = e.message; }
+}
+async function addWish(id) {
+    const box = document.getElementById("pd-alert");
+    try {
+        await HCShopApi.request("/api/gio-hang/yeu-thich/" + id, { method: "POST" });
+        box.className = "alert alert-success"; box.textContent = "Đã thêm vào danh sách yêu thích.";
+    } catch (e) { box.className = "alert alert-danger"; box.textContent = e.message; }
+}
+async function loadReviews(soSao, coAnh, coPh, btn) {
+    if (btn) {
+        document.querySelectorAll("#rev-filters .hc-cat-pill").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+    }
+    let url = "/api/danh-gia/loc?SanPhamId=" + spId;
+    if (soSao) url += "&SoSao=" + soSao;
+    if (coAnh !== null) url += "&CoHinhAnh=" + coAnh;
+    if (coPh !== null) url += "&CoPhanHoi=" + coPh;
+    const res = await HCShopApi.request(url, { ignoreAuthRedirect: true });
+    const el = document.getElementById("rev-list");
+    if (!res || !res.data.items.length) { el.innerHTML = "<p class='text-muted mb-0'>Không có đánh giá phù hợp.</p>"; return; }
+    el.innerHTML = res.data.items.map(r => `
+        <div class="border-top pt-3 mt-3">
+            <div class="d-flex justify-content-between">
+                <strong>${r.tenNguoiDanhGia} <span class="text-warning">${"★".repeat(r.soSao)}</span></strong>
+                <small class="text-muted">${new Date(r.ngayTao).toLocaleString("vi-VN")}</small>
+            </div>
+            <p class="my-2">${r.noiDung}</p>
+            <button class="btn btn-light border btn-sm hc-pill" onclick="likeRev('${r.id}')">Hữu ích (${r.soLuotThich})</button>
+            ${r.phanHoi ? `<div class="bg-light rounded-3 p-3 mt-2 small"><strong>Phản hồi từ cửa hàng:</strong> ${r.phanHoi.noiDung}</div>` : ""}
+        </div>`).join("");
+}
+async function likeRev(id) {
+    try { await HCShopApi.request("/api/danh-gia/" + id + "/thich", { method: "POST" }); loadReviews(null, null, null); }
+    catch (e) { alert(e.message); }
+}
+if (spId) document.addEventListener("DOMContentLoaded", () => loadReviews(null, null, null));
+</script>
+}

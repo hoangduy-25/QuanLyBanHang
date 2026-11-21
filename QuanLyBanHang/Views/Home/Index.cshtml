@@ -1,33 +1,138 @@
-﻿@{
-    ViewBag.Title = "Home Page";
+﻿@model QuanLyBanHang.Models.DTOs.Common.PagedResult<QuanLyBanHang.Models.DTOs.SanPham.SanPhamListItemResponse>
+@{
+    ViewBag.Title = "Danh sách sản phẩm";
+    var danhMucs = ViewBag.DanhMucs as IEnumerable<QuanLyBanHang.Models.DTOs.DanhMuc.DanhMucResponse>;
+    var q = ViewBag.Query as QuanLyBanHang.Models.DTOs.SanPham.SanPhamFilterQuery ?? new QuanLyBanHang.Models.DTOs.SanPham.SanPhamFilterQuery();
+}
+
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+    <div>
+        <h2 class="fw-bold mb-1" id="hc-hero-greeting">Chào mừng đến với HCShop</h2>
+        <div class="text-muted">Danh sách sản phẩm</div>
+    </div>
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+        <input type="hidden" name="DanhMucId" value="@q.DanhMucId" />
+        <input type="hidden" name="TuKhoa" value="@q.TuKhoa" />
+        <input type="number" class="form-control form-control-sm hc-pill" style="width:120px" name="GiaTu" value="@q.GiaTu" placeholder="Từ (đ)" />
+        <span class="text-muted">–</span>
+        <input type="number" class="form-control form-control-sm hc-pill" style="width:120px" name="GiaDen" value="@q.GiaDen" placeholder="Đến (đ)" />
+        <select name="SapXep" class="form-select form-select-sm hc-pill" style="width:155px" onchange="this.form.submit()">
+            <option value="NgayTaoDesc" @(q.SapXep == "NgayTaoDesc" ? "selected" : "")>Sắp xếp: Mặc định</option>
+            <option value="GiaAsc" @(q.SapXep == "GiaAsc" ? "selected" : "")>Giá tăng dần</option>
+            <option value="GiaDesc" @(q.SapXep == "GiaDesc" ? "selected" : "")>Giá giảm dần</option>
+            <option value="TenAsc" @(q.SapXep == "TenAsc" ? "selected" : "")>Tên A - Z</option>
+        </select>
+        <button class="btn hc-btn-primary btn-sm px-3" type="submit">Lọc</button>
+    </form>
+</div>
+
+<div class="hc-card p-3 mb-4">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <input type="text" id="cat-search-input" class="form-control form-control-sm hc-pill bg-light border-0 px-3" style="max-width:240px" placeholder="Tìm danh mục sản phẩm..." oninput="filterCatPills(this.value)" />
+        <a href="@Url.Action("Index", "Home")" class="hc-cat-pill @(!q.DanhMucId.HasValue ? "active" : "")">Tất cả danh mục</a>
+        @if (danhMucs != null)
+        {
+            foreach (var dm in danhMucs)
+            {
+                <a href="@Url.Action("Index", "Home", new { DanhMucId = dm.Id, TuKhoa = q.TuKhoa, GiaTu = q.GiaTu, GiaDen = q.GiaDen, SapXep = q.SapXep })"
+                   class="hc-cat-pill cat-pill-item @(q.DanhMucId == dm.Id ? "active" : "")" data-name="@dm.Ten.ToLower()">
+                    @dm.Ten (@dm.SoSanPham)
+                </a>
+            }
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    @if (Model != null && Model.Items.Any())
+    {
+        foreach (var sp in Model.Items)
+        {
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="hc-card h-100 d-flex flex-column">
+                    <div class="hc-product-img">
+                        @if (!string.IsNullOrWhiteSpace(sp.HinhAnh))
+                        {
+                            <img src="@sp.HinhAnh" alt="@sp.Ten" />
+                        }
+                        else
+                        {
+                            <span class="text-muted small">@sp.MaSanPham</span>
+                        }
+                        <button type="button" class="hc-heart-btn" title="Yêu thích" onclick="quickWish('@sp.Id', this)">♥</button>
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center small mb-1">
+                            <span class="text-muted text-truncate">@sp.TenDanhMuc</span>
+                            @if (sp.ConHang)
+                            {
+                                <span class="text-muted">Tồn: @sp.SoLuongTon</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger fw-semibold">Hết hàng</span>
+                            }
+                        </div>
+                        <a href="@Url.Action("ChiTiet", "SanPham", new { id = sp.Id })" class="fw-bold text-dark text-decoration-none mb-1 hc-line-clamp-2">@sp.Ten</a>
+                        <div class="small text-muted mb-3">★ @sp.DiemTrungBinh (@sp.SoLuotDanhGia đánh giá)</div>
+                        <div class="mt-auto d-flex align-items-center justify-content-between">
+                            <span class="fw-bold">@string.Format("{0:N0} đ", sp.GiaBan)</span>
+                            <button type="button" class="btn btn-light btn-sm hc-pill px-3 fw-semibold" @(sp.ConHang ? "" : "disabled") onclick="quickAddCart('@sp.Id')">+ Thêm</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12"><div class="hc-card p-5 text-center text-muted">Không tìm thấy sản phẩm phù hợp.</div></div>
+    }
+</div>
+
+@if (Model != null && Model.TotalItems > 0)
+{
+    var fromItem = (Model.Page - 1) * Model.PageSize + 1;
+    var toItem = System.Math.Min(Model.Page * Model.PageSize, Model.TotalItems);
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="small text-muted">Hiển thị @fromItem–@toItem / @Model.TotalItems sản phẩm</div>
+        <div class="d-flex gap-1">
+            @if (Model.Page > 1)
+            {
+                <a class="btn btn-light border btn-sm hc-pill px-3" href="@Url.Action("Index", "Home", new { Page = Model.Page - 1, q.DanhMucId, q.TuKhoa, q.GiaTu, q.GiaDen, q.SapXep })">&lt; Trước</a>
+            }
+            @for (int p = 1; p <= Model.TotalPages; p++)
+            {
+                <a class="btn btn-sm hc-pill px-3 @(p == Model.Page ? "hc-btn-primary" : "btn-light border")"
+                   href="@Url.Action("Index", "Home", new { Page = p, q.DanhMucId, q.TuKhoa, q.GiaTu, q.GiaDen, q.SapXep })">@p</a>
+            }
+            @if (Model.Page < Model.TotalPages)
+            {
+                <a class="btn btn-light border btn-sm hc-pill px-3" href="@Url.Action("Index", "Home", new { Page = Model.Page + 1, q.DanhMucId, q.TuKhoa, q.GiaTu, q.GiaDen, q.SapXep })">Sau &gt;</a>
+            }
+        </div>
+    </div>
+}
+
+@section scripts {
+<script>
+function filterCatPills(val) {
+    const kw = (val || "").trim().toLowerCase();
+    document.querySelectorAll(".cat-pill-item").forEach(el => {
+        el.style.display = !kw || el.dataset.name.includes(kw) ? "inline-block" : "none";
+    });
+}
+async function quickAddCart(id) {
+    try {
+        await HCShopApi.request("/api/gio-hang/san-pham", { method: "POST", body: JSON.stringify({ sanPhamId: parseInt(id), soLuong: 1 }) });
+        HCShopApi.refreshCartBadge();
+    } catch (err) { alert(err.message); }
+}
+async function quickWish(id, btn) {
+    try {
+        await HCShopApi.request("/api/gio-hang/yeu-thich/" + id, { method: "POST" });
+        btn.classList.add("liked");
+    } catch (err) { alert(err.message); }
+}
+</script>
 }
-
-<main>
-    <section class="row" aria-labelledby="aspnetTitle">
-        <h1 id="title">ASP.NET</h1>
-        <p class="lead">ASP.NET is a free web framework for building great Web sites and Web applications using HTML, CSS and JavaScript.</p>
-        <p><a href="https://asp.net" class="btn btn-primary btn-md">Learn more &raquo;</a></p>
-    </section>
-
-    <div class="row">
-        <section class="col-md-4" aria-labelledby="gettingStartedTitle">
-            <h2 id="gettingStartedTitle">Getting started</h2>
-            <p>
-                ASP.NET MVC gives you a powerful, patterns-based way to build dynamic websites that
-                enables a clean separation of concerns and gives you full control over markup
-                for enjoyable, agile development.
-            </p>
-            <p><a class="btn btn-outline-dark" href="https://go.microsoft.com/fwlink/?LinkId=301865">Learn more &raquo;</a></p>
-        </section>
-        <section class="col-md-4" aria-labelledby="librariesTitle">
-            <h2 id="librariesTitle">Get more libraries</h2>
-            <p>NuGet is a free Visual Studio extension that makes it easy to add, remove, and update libraries and tools in Visual Studio projects.</p>
-            <p><a class="btn btn-outline-dark" href="https://go.microsoft.com/fwlink/?LinkId=301866">Learn more &raquo;</a></p>
-        </section>
-        <section class="col-md-4" aria-labelledby="hostingTitle">
-            <h2 id="hostingTitle">Web Hosting</h2>
-            <p>You can easily find a web hosting company that offers the right mix of features and price for your applications.</p>
-            <p><a class="btn btn-outline-dark" href="https://go.microsoft.com/fwlink/?LinkId=301867">Learn more &raquo;</a></p>
-        </section>
-    </div>
-</main>

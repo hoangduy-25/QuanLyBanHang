@@ -6,7 +6,7 @@ namespace QuanLyBanHang.Models.DTOs.DanhMuc
     // UC-11 & UC-12
     public class DanhMucResponse
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string Ten { get; set; }
         public string MoTa { get; set; }
         public string HinhAnh { get; set; }

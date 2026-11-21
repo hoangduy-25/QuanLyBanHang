@@ -28,45 +28,45 @@ namespace QuanLyBanHang.Controllers.Api
         }
 
         // UC-39: GET /api/don-hang/{id} (Khách hàng, Nhân viên)
-        [HttpGet, Route("{id:guid}")]
+        [HttpGet, Route("{id:int}")]
         [JwtAuthorize(Roles = "KhachHang,NhanVien")]
-        public async Task<IHttpActionResult> XemChiTiet(Guid id)
+        public async Task<IHttpActionResult> XemChiTiet(int id)
         {
             var res = await _service.XemChiTietAsync(CurrentUserId.Value, CurrentUserRole, id);
             return OkApi(res);
         }
 
         // UC-41: PATCH /api/don-hang/{id}/huy (Khách hàng, Nhân viên)
-        [HttpPatch, Route("{id:guid}/huy")]
+        [HttpPatch, Route("{id:int}/huy")]
         [JwtAuthorize(Roles = "KhachHang,NhanVien")]
-        public async Task<IHttpActionResult> Huy(Guid id, [FromBody] HuyDonHangRequest request)
+        public async Task<IHttpActionResult> Huy(int id, [FromBody] HuyDonHangRequest request)
         {
             await _service.HuyAsync(CurrentUserId.Value, CurrentUserRole, id, request);
             return OkApi<object>(null, "Hủy đơn hàng thành công.");
         }
 
         // UC-42: GET /api/don-hang/{id}/hanh-trinh (Khách hàng)
-        [HttpGet, Route("{id:guid}/hanh-trinh")]
+        [HttpGet, Route("{id:int}/hanh-trinh")]
         [JwtAuthorize(Roles = "KhachHang")]
-        public async Task<IHttpActionResult> TraCuuHanhTrinh(Guid id)
+        public async Task<IHttpActionResult> TraCuuHanhTrinh(int id)
         {
             var res = await _service.TraCuuHanhTrinhAsync(CurrentUserId.Value, id);
             return OkApi(res);
         }
 
         // UC-43: PATCH /api/don-hang/{id}/xac-nhan (Nhân viên)
-        [HttpPatch, Route("{id:guid}/xac-nhan")]
+        [HttpPatch, Route("{id:int}/xac-nhan")]
         [JwtAuthorize(Roles = "NhanVien")]
-        public async Task<IHttpActionResult> XacNhan(Guid id)
+        public async Task<IHttpActionResult> XacNhan(int id)
         {
             await _service.XacNhanAsync(CurrentUserId.Value, id);
             return OkApi<object>(null, "Xác nhận đơn hàng thành công.");
         }
 
         // UC-44: PATCH /api/don-hang/{id}/trang-thai (Nhân viên)
-        [HttpPatch, Route("{id:guid}/trang-thai")]
+        [HttpPatch, Route("{id:int}/trang-thai")]
         [JwtAuthorize(Roles = "NhanVien")]
-        public async Task<IHttpActionResult> CapNhatTrangThai(Guid id, [FromBody] CapNhatTrangThaiDonHangRequest request)
+        public async Task<IHttpActionResult> CapNhatTrangThai(int id, [FromBody] CapNhatTrangThaiDonHangRequest request)
         {
             await _service.CapNhatTrangThaiAsync(CurrentUserId.Value, id, request);
             return OkApi<object>(null, "Cập nhật trạng thái đơn hàng thành công.");

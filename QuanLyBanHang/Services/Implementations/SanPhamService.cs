@@ -36,7 +36,7 @@ namespace QuanLyBanHang.Services.Implementations
             };
         }
 
-        public async Task<SanPhamChiTietResponse> XemChiTietAsync(Guid id, bool laQuanLy)
+        public async Task<SanPhamChiTietResponse> XemChiTietAsync(int id, bool laQuanLy)
         {
             var sp = await _uow.SanPhams.GetDetailByIdAsync(id, !laQuanLy);
             if (sp == null)
@@ -51,7 +51,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-20: Thêm sản phẩm mới và khởi tạo bản ghi tồn kho ban đầu
-        public async Task<SanPhamChiTietResponse> ThemAsync(TaoSanPhamRequest request, Guid quanLyId)
+        public async Task<SanPhamChiTietResponse> ThemAsync(TaoSanPhamRequest request, int quanLyId)
         {
             var danhMuc = await _uow.DanhMucs.GetActiveByIdAsync(request.DanhMucId);
             if (danhMuc == null)
@@ -117,7 +117,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-21: Sửa thông tin sản phẩm (không sửa số lượng tồn kho tại đây)
-        public async Task<SanPhamChiTietResponse> SuaAsync(Guid id, SuaSanPhamRequest request)
+        public async Task<SanPhamChiTietResponse> SuaAsync(int id, SuaSanPhamRequest request)
         {
             var sp = await _uow.SanPhams.GetDetailByIdAsync(id, false);
             if (sp == null)
@@ -143,7 +143,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-22: Xóa sản phẩm
-        public async Task XoaAsync(Guid id)
+        public async Task XoaAsync(int id)
         {
             var sp = await _uow.SanPhams.GetDetailByIdAsync(id, false);
             if (sp == null)
@@ -171,7 +171,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-23: Ẩn / Hiện sản phẩm
-        public async Task<SanPhamChiTietResponse> AnHienAsync(Guid id, AnHienSanPhamRequest request)
+        public async Task<SanPhamChiTietResponse> AnHienAsync(int id, AnHienSanPhamRequest request)
         {
             var sp = await _uow.SanPhams.GetDetailByIdAsync(id, false);
             if (sp == null)

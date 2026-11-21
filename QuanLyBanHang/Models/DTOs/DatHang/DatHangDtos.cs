@@ -9,12 +9,12 @@ namespace QuanLyBanHang.Models.DTOs.DatHang
     public class ChonDiaChiRequest
     {
         [Required(ErrorMessage = "Vui lòng chọn địa chỉ nhận hàng.")]
-        public Guid DiaChiId { get; set; }
+        public int DiaChiId { get; set; }
     }
 
     public class ChonDiaChiResponse
     {
-        public Guid DiaChiId { get; set; }
+        public int DiaChiId { get; set; }
         public string TenNguoiNhan { get; set; }
         public string SoDienThoai { get; set; }
         public string DiaChiGiaoHang { get; set; }
@@ -31,7 +31,7 @@ namespace QuanLyBanHang.Models.DTOs.DatHang
 
     public class ApDungMaGiamGiaResponse
     {
-        public Guid MaGiamGiaId { get; set; }
+        public int MaGiamGiaId { get; set; }
         public string Ma { get; set; }
         public decimal TamTinh { get; set; }
         public decimal TienGiam { get; set; }
@@ -55,7 +55,7 @@ namespace QuanLyBanHang.Models.DTOs.DatHang
     // UC-40: POST /api/dat-hang/xem-truoc
     public class XemTruocDatHangRequest
     {
-        public Guid? DiaChiId { get; set; }
+        public int? DiaChiId { get; set; }
         public string MaGiamGia { get; set; }
         public string PhuongThucThanhToan { get; set; }
     }
@@ -80,7 +80,7 @@ namespace QuanLyBanHang.Models.DTOs.DatHang
     public class XacNhanDatHangRequest
     {
         [Required(ErrorMessage = "Vui lòng chọn địa chỉ nhận hàng.")]
-        public Guid DiaChiId { get; set; }
+        public int DiaChiId { get; set; }
 
         public string MaGiamGia { get; set; }
 
@@ -91,7 +91,7 @@ namespace QuanLyBanHang.Models.DTOs.DatHang
 
     public class XacNhanDatHangResponse
     {
-        public Guid DonHangId { get; set; }
+        public int DonHangId { get; set; }
         public string MaDon { get; set; }
         public string TrangThai { get; set; }
         public decimal TongThanhToan { get; set; }

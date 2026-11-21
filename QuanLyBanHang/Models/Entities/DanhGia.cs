@@ -18,10 +18,10 @@ namespace QuanLyBanHang.Models.Entities
             ThichDanhGias = new HashSet<ThichDanhGia>();
         }
 
-        public Guid Id { get; set; }
-        public Guid TaiKhoanId { get; set; }
-        public Guid SanPhamId { get; set; }
-        public Guid DonHangId { get; set; }
+        public int Id { get; set; }
+        public int TaiKhoanId { get; set; }
+        public int SanPhamId { get; set; }
+        public int DonHangId { get; set; }
         public int SoSao { get; set; }
         public string NoiDung { get; set; }
         public string HinhAnh { get; set; }

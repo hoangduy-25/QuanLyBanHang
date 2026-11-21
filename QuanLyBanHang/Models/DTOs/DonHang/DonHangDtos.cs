@@ -16,9 +16,9 @@ namespace QuanLyBanHang.Models.DTOs.DonHang
 
     public class DonHangListItemResponse
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string MaDon { get; set; }
-        public Guid TaiKhoanId { get; set; }
+        public int TaiKhoanId { get; set; }
         public string TenKhachHang { get; set; }
         public DateTimeOffset NgayDat { get; set; }
         public string TrangThai { get; set; }
@@ -37,9 +37,9 @@ namespace QuanLyBanHang.Models.DTOs.DonHang
             HanhTrinh = new List<LichSuDonHangItemResponse>();
         }
 
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string MaDon { get; set; }
-        public Guid TaiKhoanId { get; set; }
+        public int TaiKhoanId { get; set; }
         public string TenKhachHang { get; set; }
         public DateTimeOffset NgayDat { get; set; }
         public string TrangThai { get; set; }
@@ -59,7 +59,7 @@ namespace QuanLyBanHang.Models.DTOs.DonHang
 
     public class ChiTietDonHangItemResponse
     {
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
         public string MaSanPham { get; set; }
         public string TenSanPham { get; set; }
         public string HinhAnh { get; set; }
@@ -71,7 +71,7 @@ namespace QuanLyBanHang.Models.DTOs.DonHang
     // UC-42: GET /api/don-hang/{id}/hanh-trinh
     public class LichSuDonHangItemResponse
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string TrangThai { get; set; }
         public DateTimeOffset ThoiDiem { get; set; }
         public string NguoiThucHien { get; set; }

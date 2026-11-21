@@ -16,7 +16,7 @@ namespace QuanLyBanHang.Repositories.Implementations
     {
         public DonHangRepository(QuanLyBanHangDbContext context) : base(context) { }
 
-        public async Task<PagedResult<DonHang>> GetPagedAsync(DonHangFilterQuery query, Guid? taiKhoanId = null)
+        public async Task<PagedResult<DonHang>> GetPagedAsync(DonHangFilterQuery query, int? taiKhoanId = null)
         {
             var q = DbSet.AsNoTracking()
                 .Include(d => d.TaiKhoan)
@@ -58,7 +58,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             };
         }
 
-        public Task<DonHang> GetDetailByIdAsync(Guid id)
+        public Task<DonHang> GetDetailByIdAsync(int id)
         {
             return DbSet
                 .Include(d => d.TaiKhoan)
@@ -76,7 +76,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 .FirstOrDefaultAsync(d => d.MaDon.ToLower() == normalized);
         }
 
-        public Task<List<LichSuDonHang>> GetHanhTrinhAsync(Guid donHangId)
+        public Task<List<LichSuDonHang>> GetHanhTrinhAsync(int donHangId)
         {
             return Context.LichSuDonHangs.AsNoTracking()
                 .Include(ls => ls.TaiKhoan)
@@ -85,7 +85,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 .ToListAsync();
         }
 
-        public Task<int> CountDonChuaHoanTatByTaiKhoanAsync(Guid taiKhoanId)
+        public Task<int> CountDonChuaHoanTatByTaiKhoanAsync(int taiKhoanId)
         {
             var hoanThanh = TrangThaiDonHang.HoanThanh.ToString();
             var daHuy = TrangThaiDonHang.DaHuy.ToString();
@@ -95,7 +95,7 @@ namespace QuanLyBanHang.Repositories.Implementations
                 d.TrangThai != daHuy);
         }
 
-        public Task<bool> DaMuaVaHoanThanhAsync(Guid taiKhoanId, Guid donHangId, Guid sanPhamId)
+        public Task<bool> DaMuaVaHoanThanhAsync(int taiKhoanId, int donHangId, int sanPhamId)
         {
             var hoanThanh = TrangThaiDonHang.HoanThanh.ToString();
             return DbSet.AnyAsync(d =>

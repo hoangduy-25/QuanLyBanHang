@@ -1,0 +1,75 @@
+﻿@{ Layout = "~/Views/Shared/_PortalLayout.cshtml"; ViewBag.Title = "Báo cáo & Tổng quan"; }
+<div class="row g-3 mb-4" id="kpi-row"></div>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="hc-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0">Biểu đồ doanh thu (UC-59)</h6>
+                <div class="d-flex gap-1">
+                    <button class="hc-cat-pill active" onclick="loadChart('ngay', this)">Ngày</button>
+                    <button class="hc-cat-pill" onclick="loadChart('tuan', this)">Tuần</button>
+                    <button class="hc-cat-pill" onclick="loadChart('thang', this)">Tháng</button>
+                    <button class="hc-cat-pill" onclick="loadChart('nam', this)">Năm</button>
+                </div>
+            </div>
+            <div id="rev-chart" class="small">Đang tải...</div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="hc-card p-4 h-100">
+            <h6 class="fw-bold mb-3">Top sản phẩm bán chạy (UC-60)</h6>
+            <div id="top-products" class="small">Đang tải...</div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="hc-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0">Hàng tồn đọng lâu chưa bán (UC-61)</h6>
+                <div class="d-flex gap-1">
+                    <button class="hc-cat-pill active" onclick="loadSlow(30, this)">&ge; 30 ngày</button>
+                    <button class="hc-cat-pill" onclick="loadSlow(60, this)">&ge; 60 ngày</button>
+                    <button class="hc-cat-pill" onclick="loadSlow(90, this)">&ge; 90 ngày</button>
+                </div>
+            </div>
+            <div id="slow-table" class="table-responsive">Đang tải...</div>
+        </div>
+    </div>
+</div>
+@section scripts {
+<script>
+async function loadOverview() {
+    const res = await HCShopApi.request("/api/bao-cao/tong-quan");
+    const d = res.data;
+    document.getElementById("kpi-row").innerHTML = [
+        ["Tổng doanh thu", HCShopApi.formatVnd(d.tongDoanhThu)],
+        ["Tổng đơn hàng", d.tongDonHang],
+        ["Khách hàng mới", d.tongKhachHangMoi],
+        ["Sắp hết hàng", d.soSanPhamSapHetHang],
+        ["Đơn hoàn thành", d.donHoanThanh],
+        ["Đơn chờ xác nhận", d.donChoXacNhan]
+    ].map(k => `<div class="col-6 col-md-4 col-lg-2"><div class="hc-card p-3"><div class="small text-muted">${k[0]}</div><div class="fw-bold fs-5 mt-1">${k[1]}</div></div></div>`).join("");
+}
+async function loadChart(donVi, btn) {
+    if (btn) { btn.parentElement.querySelectorAll(".hc-cat-pill").forEach(b => b.classList.remove("active")); btn.classList.add("active"); }
+    const res = await HCShopApi.request("/api/bao-cao/doanh-thu?donVi=" + donVi);
+    const d = res.data;
+    if (!d.duLieu.length) { document.getElementById("rev-chart").innerHTML = "<p class='text-muted'>Không có dữ liệu.</p>"; return; }
+    document.getElementById("rev-chart").innerHTML = `<div class="mb-2 text-muted">Tổng: <strong>${HCShopApi.formatVnd(d.tongDoanhThu)}</strong> • Cao nhất: ${HCShopApi.formatVnd(d.giaTriCaoNhat)} • Thấp nhất: ${HCShopApi.formatVnd(d.giaTriThapNhat)}</div>` +
+        `<table class="table table-sm mb-0"><thead><tr><th>Mốc</th><th>Đơn</th><th>Doanh thu</th></tr></thead><tbody>` +
+        d.duLieu.map(r => `<tr><td>${r.mocThoiGian}</td><td>${r.soDonHoanThanh}</td><td class="fw-bold">${HCShopApi.formatVnd(r.doanhThu)}</td></tr>`).join("") + `</tbody></table>`;
+}
+async function loadTop() {
+    const res = await HCShopApi.request("/api/bao-cao/san-pham-ban-chay?Top=5");
+    document.getElementById("top-products").innerHTML = !res.data.length ? "<p class='text-muted'>Không có dữ liệu.</p>" :
+        res.data.map(p => `<div class="d-flex justify-content-between border-bottom py-2"><span>#${p.thuHang} <strong>${p.tenSanPham}</strong> (${p.soLuongBan})</span><strong>${HCShopApi.formatVnd(p.doanhThu)}</strong></div>`).join("");
+}
+async function loadSlow(days, btn) {
+    if (btn) { btn.parentElement.querySelectorAll(".hc-cat-pill").forEach(b => b.classList.remove("active")); btn.classList.add("active"); }
+    const res = await HCShopApi.request("/api/bao-cao/san-pham-ton-lau?SoNgayKhongBan=" + days);
+    document.getElementById("slow-table").innerHTML = !res.data.length ? "<p class='text-muted mb-0'>Không có sản phẩm tồn kho lâu.</p>" :
+        `<table class="table table-sm mb-0"><thead><tr><th>Sản phẩm</th><th>Tồn hiện tại</th><th>Giá trị tồn</th><th>Số ngày chưa bán</th></tr></thead><tbody>` +
+        res.data.map(s => `<tr><td><strong>${s.tenSanPham}</strong> <small class="text-muted">(${s.maSanPham})</small></td><td>${s.soLuongTon}</td><td>${HCShopApi.formatVnd(s.giaTriTon)}</td><td>${s.soNgayTon} ngày</td></tr>`).join("") + `</tbody></table>`;
+}
+document.addEventListener("DOMContentLoaded", () => { loadOverview(); loadChart("ngay"); loadTop(); loadSlow(30); });
+</script>
+}

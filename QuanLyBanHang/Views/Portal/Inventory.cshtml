@@ -1,0 +1,47 @@
+﻿@{ Layout = "~/Views/Shared/_PortalLayout.cshtml"; ViewBag.Title = "Quản lý kho hàng"; }
+<div class="hc-card p-3 mb-3 d-flex justify-content-between flex-wrap gap-2">
+    <div class="d-flex gap-1">
+        <button class="hc-cat-pill active" onclick="invTab('stock', this)">Tồn kho hiện tại</button>
+        <button class="hc-cat-pill" onclick="invTab('ledger', this)">Sổ cái biến động</button>
+    </div>
+</div>
+<div id="inv-box" class="hc-card p-3 table-responsive">Đang tải...</div>
+@section scripts {
+<script>
+async function invTab(mode, btn) {
+    if (btn) { btn.parentElement.querySelectorAll(".hc-cat-pill").forEach(b => b.classList.remove("active")); btn.classList.add("active"); }
+    const box = document.getElementById("inv-box");
+    if (mode === "stock") {
+        const res = await HCShopApi.request("/api/kho?Page=1&PageSize=50");
+        box.innerHTML = `<table class="table table-sm align-middle mb-0"><thead><tr><th>Sản phẩm</th><th>Tồn thực tế</th><th>Ngưỡng tối thiểu</th><th>Trạng thái</th><th>Thao tác kho</th></tr></thead><tbody>` +
+            res.data.items.map(k => `<tr>
+                <td><strong>${k.tenSanPham}</strong><div class="small text-muted">${k.maSanPham}</div></td>
+                <td class="fw-bold">${k.soLuongTon}</td>
+                <td><input type="number" class="form-control form-control-sm" style="width:85px" value="${k.nguongToiThieu}" onchange="setMin('${k.tonKhoId}', this.value)" /></td>
+                <td>${HCShopApi.statusBadge(k.trangThaiTon)}</td>
+                <td class="d-flex gap-1">
+                    <button class="btn btn-light border btn-sm hc-pill" onclick="nhapKho('${k.sanPhamId}')">+ Nhập kho</button>
+                    <button class="btn btn-light border text-danger btn-sm hc-pill" onclick="giamKho('${k.sanPhamId}')">- Xuất giảm</button>
+                </td>
+            </tr>`).join("") + `</tbody></table>`;
+    } else {
+        const res = await HCShopApi.request("/api/kho/lich-su?Page=1&PageSize=50");
+        box.innerHTML = `<table class="table table-sm mb-0"><thead><tr><th>Thời điểm</th><th>Sản phẩm</th><th>Loại</th><th>Thay đổi</th><th>Trước → Sau</th><th>Người thực hiện</th><th>Lý do</th></tr></thead><tbody>` +
+            res.data.items.map(b => `<tr><td>${new Date(b.thoiDiem).toLocaleString("vi-VN")}</td><td>${b.tenSanPham}</td><td>${b.loai}</td><td>${b.soLuongThayDoi}</td><td>${b.soLuongTruoc} → ${b.soLuongSau}</td><td>${b.nguoiThucHien}</td><td>${b.lyDo}</td></tr>`).join("") + `</tbody></table>`;
+    }
+}
+async function setMin(id, v) { await HCShopApi.request("/api/kho/" + id + "/nguong-toi-thieu", { method: "PATCH", body: JSON.stringify({ nguongToiThieu: parseInt(v) }) }); invTab("stock"); }
+async function nhapKho(spId) {
+    const sl = parseInt(prompt("Số lượng nhập:") || "0"); if (sl <= 0) return;
+    await HCShopApi.request("/api/kho/nhap-tang", { method: "POST", body: JSON.stringify({ sanPhamId: spId, soLuongNhap: sl, nhaCungCap: prompt("Nhà cung cấp (tùy chọn):"), ghiChu: prompt("Ghi chú:") }) });
+    invTab("stock");
+}
+async function giamKho(spId) {
+    const sl = parseInt(prompt("Số lượng giảm:") || "0"); if (sl <= 0) return;
+    const lyDo = prompt("Lý do điều chỉnh giảm (bắt buộc):"); if (!lyDo) return;
+    try { await HCShopApi.request("/api/kho/dieu-chinh-giam", { method: "POST", body: JSON.stringify({ sanPhamId: spId, soLuongGiam: sl, lyDo }) }); invTab("stock"); }
+    catch (e) { alert(e.message); }
+}
+document.addEventListener("DOMContentLoaded", () => invTab("stock"));
+</script>
+}

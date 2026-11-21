@@ -32,7 +32,7 @@ namespace QuanLyBanHang.Services.Implementations
             return list.Select(Map).ToList();
         }
 
-        public async Task<MaGiamGiaResponse> XemChiTietAsync(Guid id, bool laQuanLy)
+        public async Task<MaGiamGiaResponse> XemChiTietAsync(int id, bool laQuanLy)
         {
             var m = await _uow.MaGiamGias.GetActiveByIdAsync(id);
             var now = DateTimeOffset.Now;
@@ -70,7 +70,7 @@ namespace QuanLyBanHang.Services.Implementations
             return Map(entity);
         }
 
-        public async Task<MaGiamGiaResponse> SuaAsync(Guid id, SuaMaGiamGiaRequest request)
+        public async Task<MaGiamGiaResponse> SuaAsync(int id, SuaMaGiamGiaRequest request)
         {
             var entity = await _uow.MaGiamGias.GetActiveByIdAsync(id);
             if (entity == null)
@@ -109,7 +109,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-50: Xóa hoặc ngừng áp dụng nếu đã được dùng trong đơn hàng
-        public async Task<string> XoaAsync(Guid id)
+        public async Task<string> XoaAsync(int id)
         {
             var entity = await _uow.MaGiamGias.GetActiveByIdAsync(id);
             if (entity == null)

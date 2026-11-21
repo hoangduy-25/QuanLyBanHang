@@ -1,0 +1,88 @@
+﻿@{ ViewBag.Title = "Đơn hàng của tôi"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0">Đơn hàng của tôi</h4>
+    <a href="@Url.Action("Index", "Account")" class="btn btn-light border btn-sm hc-pill px-3">Hồ sơ &amp; Sổ địa chỉ</a>
+</div>
+<div class="hc-card p-3 mb-3">
+    <div class="d-flex flex-wrap gap-1 mb-2" id="ord-tabs">
+        <button class="hc-cat-pill active" onclick="setOrdStatus('', this)">Tất cả</button>
+        <button class="hc-cat-pill" onclick="setOrdStatus('ChoXacNhan', this)">Chờ xác nhận</button>
+        <button class="hc-cat-pill" onclick="setOrdStatus('DaXacNhan', this)">Đã xác nhận</button>
+        <button class="hc-cat-pill" onclick="setOrdStatus('DangChuanBi', this)">Đang chuẩn bị</button>
+        <button class="hc-cat-pill" onclick="setOrdStatus('DangGiao', this)">Đang giao</button>
+        <button class="hc-cat-pill" onclick="setOrdStatus('HoanThanh', this)">Hoàn thành</button>
+        <button class="hc-cat-pill" onclick="setOrdStatus('DaHuy', this)">Đã hủy</button>
+    </div>
+    <input id="ord-search" class="form-control form-control-sm hc-pill bg-light border-0 px-3" style="max-width:300px" placeholder="Tìm theo mã đơn..." onchange="loadOrders()" />
+</div>
+<div class="row g-3">
+    <div class="col-lg-5" id="ord-master">Đang tải...</div>
+    <div class="col-lg-7" id="ord-detail"><div class="hc-card p-5 text-center text-muted">Chọn một đơn hàng để xem chi tiết &amp; hành trình.</div></div>
+</div>
+@section scripts {
+<script>
+let ordStatus = "";
+function setOrdStatus(st, btn) {
+    ordStatus = st;
+    document.querySelectorAll("#ord-tabs .hc-cat-pill").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    loadOrders();
+}
+async function loadOrders() {
+    let url = "/api/don-hang?Page=1&PageSize=20";
+    if (ordStatus) url += "&TrangThai=" + ordStatus;
+    const kw = document.getElementById("ord-search").value.trim();
+    if (kw) url += "&MaDon=" + encodeURIComponent(kw);
+    const res = await HCShopApi.request(url);
+    const box = document.getElementById("ord-master");
+    if (!res.data.items.length) { box.innerHTML = `<div class="hc-card p-4 text-muted text-center">Chưa có đơn hàng.</div>`; return; }
+    box.innerHTML = res.data.items.map(o => `
+        <div class="hc-card p-3 mb-2" style="cursor:pointer" onclick="loadOrderDetail('${o.id}')">
+            <div class="d-flex justify-content-between mb-1"><strong>${o.maDon}</strong>${HCShopApi.statusBadge(o.trangThai)}</div>
+            <div class="small text-muted">${new Date(o.ngayDat).toLocaleString("vi-VN")} • ${o.soMatHang} mặt hàng</div>
+            <div class="fw-bold mt-1">${HCShopApi.formatVnd(o.tongThanhToan)}</div>
+        </div>`).join("");
+    loadOrderDetail(res.data.items[0].id);
+}
+async function loadOrderDetail(id) {
+    const res = await HCShopApi.request("/api/don-hang/" + id);
+    const d = res.data;
+    const canCancel = d.trangThai === "ChoXacNhan" || d.trangThai === "DaXacNhan";
+    document.getElementById("ord-detail").innerHTML = `
+        <div class="hc-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">${d.maDon}</h5>${HCShopApi.statusBadge(d.trangThai)}
+            </div>
+            <div class="small text-muted mb-3">Người nhận: <strong>${d.tenNguoiNhan}</strong> (${d.soDienThoaiNhan})<br/>Địa chỉ: ${d.diaChiGiaoHang}</div>
+            <h6 class="fw-bold">Sản phẩm trong đơn</h6>
+            ${d.chiTiets.map(ct => `<div class="d-flex justify-content-between align-items-center border-bottom py-2 small">
+                <div><strong>${ct.tenSanPham}</strong> × ${ct.soLuong}</div>
+                <div class="d-flex align-items-center gap-2">
+                    <span>${HCShopApi.formatVnd(ct.thanhTien)}</span>
+                    ${d.trangThai === "HoanThanh" ? `<button class="btn btn-light border btn-sm hc-pill" onclick="reviewProduct('${d.id}','${ct.sanPhamId}')">Đánh giá</button>` : ""}
+                </div>
+            </div>`).join("")}
+            <div class="d-flex justify-content-between mt-3 mb-3"><strong>Tổng thanh toán</strong><strong class="fs-5">${HCShopApi.formatVnd(d.tongThanhToan)}</strong></div>
+            ${canCancel ? `<button class="btn btn-outline-danger btn-sm hc-pill mb-3" onclick="cancelOrd('${d.id}')">Hủy đơn hàng</button>` : ""}
+            <h6 class="fw-bold mt-2">Nhật ký hành trình</h6>
+            <ul class="list-unstyled small mb-0">
+                ${d.hanhTrinh.map(h => `<li class="mb-1">• <strong>${h.trangThai}</strong> (${new Date(h.thoiDiem).toLocaleString("vi-VN")}) — ${h.ghiChu || ""}</li>`).join("")}
+            </ul>
+        </div>`;
+}
+async function cancelOrd(id) {
+    const lyDo = prompt("Nhập lý do hủy đơn:"); if (!lyDo) return;
+    await HCShopApi.request("/api/don-hang/" + id + "/huy", { method: "PATCH", body: JSON.stringify({ lyDoHuy: lyDo }) });
+    loadOrders();
+}
+async function reviewProduct(donHangId, sanPhamId) {
+    const soSao = parseInt(prompt("Số sao (1-5):", "5") || "5");
+    const noiDung = prompt("Nhận xét của bạn:"); if (!noiDung) return;
+    try {
+        await HCShopApi.request("/api/danh-gia", { method: "POST", body: JSON.stringify({ donHangId, sanPhamId, soSao, noiDung }) });
+        alert("Cảm ơn bạn đã đánh giá!");
+    } catch (e) { alert(e.message); }
+}
+document.addEventListener("DOMContentLoaded", loadOrders);
+</script>
+}

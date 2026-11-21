@@ -14,10 +14,10 @@ namespace QuanLyBanHang.Models.Entities
             ThoiDiem = DateTimeOffset.Now;
         }
 
-        public Guid Id { get; set; }
-        public Guid TonKhoId { get; set; }
-        public Guid? TaiKhoanId { get; set; }
-        public Guid? DonHangId { get; set; }
+        public int Id { get; set; }
+        public int TonKhoId { get; set; }
+        public int? TaiKhoanId { get; set; }
+        public int? DonHangId { get; set; }
         public string Loai { get; set; }
         public int SoLuongThayDoi { get; set; }
         public int SoLuongTruoc { get; set; }

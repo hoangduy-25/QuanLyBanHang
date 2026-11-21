@@ -22,7 +22,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-06: Xem hồ sơ cá nhân
-        public async Task<HoSoResponse> LayHoSoAsync(Guid taiKhoanId)
+        public async Task<HoSoResponse> LayHoSoAsync(int taiKhoanId)
         {
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
@@ -32,7 +32,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-06: Cập nhật thông tin cá nhân
-        public async Task<HoSoResponse> CapNhatThongTinCaNhanAsync(Guid taiKhoanId, CapNhatHoSoRequest request)
+        public async Task<HoSoResponse> CapNhatThongTinCaNhanAsync(int taiKhoanId, CapNhatHoSoRequest request)
         {
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
@@ -85,7 +85,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-10: Khóa tài khoản khách hàng
-        public async Task<KhoaMoTaiKhoanResponse> KhoaAsync(Guid quanLyId, Guid taiKhoanId, KhoaTaiKhoanRequest request)
+        public async Task<KhoaMoTaiKhoanResponse> KhoaAsync(int quanLyId, int taiKhoanId, KhoaTaiKhoanRequest request)
         {
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
@@ -127,7 +127,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-10: Mở khóa tài khoản khách hàng
-        public async Task<KhoaMoTaiKhoanResponse> MoKhoaAsync(Guid quanLyId, Guid taiKhoanId)
+        public async Task<KhoaMoTaiKhoanResponse> MoKhoaAsync(int quanLyId, int taiKhoanId)
         {
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
@@ -162,7 +162,7 @@ namespace QuanLyBanHang.Services.Implementations
             };
         }
 
-        public async Task<List<LichSuKhoaResponse>> XemLichSuKhoaAsync(Guid taiKhoanId)
+        public async Task<List<LichSuKhoaResponse>> XemLichSuKhoaAsync(int taiKhoanId)
         {
             var list = await _uow.TaiKhoans.GetLichSuKhoaAsync(taiKhoanId);
             return list.Select(x => new LichSuKhoaResponse

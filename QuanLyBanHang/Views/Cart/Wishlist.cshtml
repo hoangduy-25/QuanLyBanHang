@@ -1,0 +1,33 @@
+﻿@{ ViewBag.Title = "Sản phẩm yêu thích"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0">Sản phẩm yêu thích</h4>
+    <button class="btn hc-btn-primary btn-sm px-3" onclick="addAllWishToCart()">Thêm tất cả vào giỏ</button>
+</div>
+<div id="wish-grid" class="row g-3"></div>
+@section scripts {
+<script>
+let wishItems = [];
+async function loadWish() {
+    const res = await HCShopApi.request("/api/gio-hang/yeu-thich");
+    wishItems = res.data || [];
+    const box = document.getElementById("wish-grid");
+    if (!wishItems.length) { box.innerHTML = `<div class="col-12"><div class="hc-card p-5 text-center text-muted">Chưa có sản phẩm yêu thích nào.</div></div>`; return; }
+    box.innerHTML = wishItems.map(w => `
+        <div class="col-6 col-md-3"><div class="hc-card p-3 h-100 d-flex flex-column">
+            <a href="/Product/Detail/${w.sanPhamId}" class="fw-bold text-dark text-decoration-none mb-1">${w.tenSanPham}</a>
+            <div class="fw-bold mb-3">${HCShopApi.formatVnd(w.giaBan)}</div>
+            <div class="mt-auto d-flex justify-content-between gap-2">
+                <button class="btn btn-light border btn-sm hc-pill flex-grow-1" onclick="addOne('${w.sanPhamId}')">+ Thêm</button>
+                <button class="btn btn-light border btn-sm text-danger hc-pill" onclick="rmWish('${w.sanPhamId}')">Xóa</button>
+            </div>
+        </div></div>`).join("");
+}
+async function addOne(id) { await HCShopApi.request("/api/gio-hang/san-pham", { method: "POST", body: JSON.stringify({ sanPhamId: id, soLuong: 1 }) }); HCShopApi.refreshCartBadge(); }
+async function rmWish(id) { await HCShopApi.request("/api/gio-hang/yeu-thich/" + id, { method: "DELETE" }); loadWish(); }
+async function addAllWishToCart() {
+    for (const w of wishItems) { if (w.conHang) try { await addOne(w.sanPhamId); } catch {} }
+    alert("Đã thêm các sản phẩm còn hàng vào giỏ.");
+}
+document.addEventListener("DOMContentLoaded", loadWish);
+</script>
+}

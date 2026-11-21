@@ -35,7 +35,7 @@ namespace QuanLyBanHang.Models.DTOs.BaoCao
     public class SanPhamBanChayDTO
     {
         public int ThuHang { get; set; }
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
         public string MaSanPham { get; set; }
         public string TenSanPham { get; set; }
         public int SoLuongBan { get; set; }
@@ -45,7 +45,7 @@ namespace QuanLyBanHang.Models.DTOs.BaoCao
     // UC-61: Khớp Class Diagram
     public class SanPhamTonLauDTO
     {
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
         public string MaSanPham { get; set; }
         public string TenSanPham { get; set; }
         public int SoLuongTon { get; set; }
@@ -75,7 +75,7 @@ namespace QuanLyBanHang.Models.DTOs.BaoCao
     {
         public DateTimeOffset? TuNgay { get; set; }
         public DateTimeOffset? DenNgay { get; set; }
-        public Guid? DanhMucId { get; set; }
+        public int? DanhMucId { get; set; }
 
         [Range(1, 100, ErrorMessage = "Số lượng top sản phẩm từ 1 đến 100.")]
         public int Top { get; set; } = 10;
@@ -85,6 +85,6 @@ namespace QuanLyBanHang.Models.DTOs.BaoCao
     {
         [Range(1, 3650, ErrorMessage = "Số ngày tồn lâu phải là số nguyên dương.")]
         public int SoNgayKhongBan { get; set; } = 30;
-        public Guid? DanhMucId { get; set; }
+        public int? DanhMucId { get; set; }
     }
 }

@@ -14,7 +14,7 @@ namespace QuanLyBanHang.Repositories.Implementations
     {
         public KhoRepository(QuanLyBanHangDbContext context) : base(context) { }
 
-        public Task<TonKho> GetBySanPhamIdAsync(Guid sanPhamId)
+        public Task<TonKho> GetBySanPhamIdAsync(int sanPhamId)
         {
             return DbSet
                 .Include(tk => tk.SanPham)

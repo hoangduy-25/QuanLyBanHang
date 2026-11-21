@@ -20,13 +20,13 @@ namespace QuanLyBanHang.Services.Implementations
             _uow = uow;
         }
 
-        public async Task<List<DiaChiResponse>> XemSoDiaChiAsync(Guid taiKhoanId)
+        public async Task<List<DiaChiResponse>> XemSoDiaChiAsync(int taiKhoanId)
         {
             var list = await _uow.DiaChis.GetByTaiKhoanIdAsync(taiKhoanId);
             return list.Select(Map).ToList();
         }
 
-        public async Task<DiaChiResponse> ThemDiaChiAsync(Guid taiKhoanId, TaoSuaDiaChiRequest request)
+        public async Task<DiaChiResponse> ThemDiaChiAsync(int taiKhoanId, TaoSuaDiaChiRequest request)
         {
             var count = await _uow.DiaChis.CountByTaiKhoanAsync(taiKhoanId);
             if (count >= MaxAddressesPerUser)
@@ -74,7 +74,7 @@ namespace QuanLyBanHang.Services.Implementations
             }
         }
 
-        public async Task<DiaChiResponse> SuaDiaChiAsync(Guid taiKhoanId, Guid diaChiId, TaoSuaDiaChiRequest request)
+        public async Task<DiaChiResponse> SuaDiaChiAsync(int taiKhoanId, int diaChiId, TaoSuaDiaChiRequest request)
         {
             var entity = await _uow.DiaChis.GetByIdAndOwnerAsync(diaChiId, taiKhoanId);
             if (entity == null)
@@ -112,7 +112,7 @@ namespace QuanLyBanHang.Services.Implementations
             }
         }
 
-        public async Task XoaDiaChiAsync(Guid taiKhoanId, Guid diaChiId)
+        public async Task XoaDiaChiAsync(int taiKhoanId, int diaChiId)
         {
             var entity = await _uow.DiaChis.GetByIdAndOwnerAsync(diaChiId, taiKhoanId);
             if (entity == null)
@@ -146,7 +146,7 @@ namespace QuanLyBanHang.Services.Implementations
             }
         }
 
-        public async Task<DiaChiResponse> DatMacDinhAsync(Guid taiKhoanId, Guid diaChiId)
+        public async Task<DiaChiResponse> DatMacDinhAsync(int taiKhoanId, int diaChiId)
         {
             var entity = await _uow.DiaChis.GetByIdAndOwnerAsync(diaChiId, taiKhoanId);
             if (entity == null)

@@ -8,7 +8,7 @@ namespace QuanLyBanHang.Models.DTOs.Kho
     public class TonKhoFilterQuery : PaginationQuery
     {
         public string TuKhoa { get; set; }
-        public Guid? DanhMucId { get; set; }
+        public int? DanhMucId { get; set; }
         /// <summary>DuHang | SapHet | HetHang</summary>
         public string TrangThaiTon { get; set; }
         public string SapXep { get; set; } = "SoLuongAsc";
@@ -16,8 +16,8 @@ namespace QuanLyBanHang.Models.DTOs.Kho
 
     public class TonKhoResponse
     {
-        public Guid TonKhoId { get; set; }
-        public Guid SanPhamId { get; set; }
+        public int TonKhoId { get; set; }
+        public int SanPhamId { get; set; }
         public string MaSanPham { get; set; }
         public string TenSanPham { get; set; }
         public string TenDanhMuc { get; set; }
@@ -38,7 +38,7 @@ namespace QuanLyBanHang.Models.DTOs.Kho
     public class NhapTangKhoRequest
     {
         [Required]
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng nhập phải là số nguyên dương.")]
         public int SoLuongNhap { get; set; }
@@ -57,7 +57,7 @@ namespace QuanLyBanHang.Models.DTOs.Kho
     public class DieuChinhGiamKhoRequest
     {
         [Required]
-        public Guid SanPhamId { get; set; }
+        public int SanPhamId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng giảm phải là số nguyên dương.")]
         public int SoLuongGiam { get; set; }
@@ -77,7 +77,7 @@ namespace QuanLyBanHang.Models.DTOs.Kho
     // UC-28: GET /api/kho/lich-su
     public class BienDongKhoFilterQuery : PaginationQuery
     {
-        public Guid? SanPhamId { get; set; }
+        public int? SanPhamId { get; set; }
         public string Loai { get; set; }
         public DateTimeOffset? TuNgay { get; set; }
         public DateTimeOffset? DenNgay { get; set; }
@@ -85,12 +85,12 @@ namespace QuanLyBanHang.Models.DTOs.Kho
 
     public class BienDongKhoResponse
     {
-        public Guid Id { get; set; }
-        public Guid TonKhoId { get; set; }
-        public Guid SanPhamId { get; set; }
+        public int Id { get; set; }
+        public int TonKhoId { get; set; }
+        public int SanPhamId { get; set; }
         public string MaSanPham { get; set; }
         public string TenSanPham { get; set; }
-        public Guid? DonHangId { get; set; }
+        public int? DonHangId { get; set; }
         public string MaDon { get; set; }
         public string Loai { get; set; }
         public int SoLuongThayDoi { get; set; }

@@ -1,0 +1,63 @@
+﻿@{ ViewBag.Title = "Giỏ hàng"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0">Giỏ hàng của bạn</h4>
+    <a href="@Url.Action("Index", "Home")" class="btn btn-light border btn-sm hc-pill px-3">Tiếp tục mua sắm</a>
+</div>
+<div id="cart-root">Đang tải giỏ hàng...</div>
+@section scripts {
+<script>
+async function loadCart() {
+    const res = await HCShopApi.request("/api/gio-hang");
+    const root = document.getElementById("cart-root");
+    if (!res || !res.data.items.length) {
+        root.innerHTML = `<div class="hc-card p-5 text-center"><p class="text-muted mb-3">Giỏ hàng trống.</p><a class="btn hc-btn-primary px-4" href="/">Quay lại mua sắm</a></div>`;
+        return;
+    }
+    const itemsHtml = res.data.items.map(i => `
+        <div class="hc-card p-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-3 ${i.khaDung ? '' : 'border-warning'}">
+            <div>
+                <div class="small text-muted">Tồn: ${i.soLuongTon} ${i.giaDaThayDoi ? '<span class="badge hc-badge-warning">Giá đã thay đổi</span>' : ''}</div>
+                <div class="fw-bold">${i.tenSanPham}</div>
+                <div class="small text-muted">${HCShopApi.formatVnd(i.donGiaHienTai)}</div>
+                ${!i.khaDung ? `<div class="small text-danger">${i.lyDoKhongKhaDung}</div>` : ''}
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="input-group input-group-sm" style="width:105px">
+                    <button class="btn btn-light border" onclick="updCart('${i.sanPhamId}', ${i.soLuong - 1})">-</button>
+                    <input class="form-control text-center" value="${i.soLuong}" readonly />
+                    <button class="btn btn-light border" onclick="updCart('${i.sanPhamId}', ${i.soLuong + 1})">+</button>
+                </div>
+                <strong style="min-width:110px" class="text-end">${HCShopApi.formatVnd(i.thanhTien)}</strong>
+                <button class="btn btn-light border btn-sm text-danger hc-pill" onclick="delCart('${i.sanPhamId}')">Xóa</button>
+            </div>
+        </div>`).join("");
+
+    root.innerHTML = `
+        <div class="row g-4">
+            <div class="col-lg-8">${itemsHtml}</div>
+            <div class="col-lg-4">
+                <div class="hc-card p-4">
+                    <h5 class="fw-bold mb-3">Tóm tắt đơn hàng</h5>
+                    <div class="d-flex justify-content-between mb-2 small"><span class="text-muted">Số lượng khả dụng</span><strong>${res.data.tongSoLuongKhaDung}</strong></div>
+                    <div class="d-flex justify-content-between mb-2 small"><span class="text-muted">Phí vận chuyển</span><strong class="text-success">Miễn phí</strong></div>
+                    <hr/>
+                    <div class="d-flex justify-content-between mb-4"><strong>Tổng tạm tính</strong><strong class="fs-5">${HCShopApi.formatVnd(res.data.tongTienTamTinh)}</strong></div>
+                    <a href="/Cart/Checkout" class="btn hc-btn-primary w-100 py-2">Tiến hành đặt hàng &rarr;</a>
+                </div>
+            </div>
+        </div>`;
+    HCShopApi.refreshCartBadge();
+}
+async function updCart(id, qty) {
+    if (qty <= 0) { delCart(id); return; }
+    try { await HCShopApi.request("/api/gio-hang/san-pham/" + id, { method: "PUT", body: JSON.stringify({ soLuong: qty }) }); loadCart(); }
+    catch (e) { alert(e.message); loadCart(); }
+}
+async function delCart(id) {
+    if (!confirm("Xóa sản phẩm khỏi giỏ hàng?")) return;
+    await HCShopApi.request("/api/gio-hang/san-pham/" + id, { method: "DELETE" });
+    loadCart();
+}
+document.addEventListener("DOMContentLoaded", loadCart);
+</script>
+}

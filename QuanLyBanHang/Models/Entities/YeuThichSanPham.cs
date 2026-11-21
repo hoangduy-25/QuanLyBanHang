@@ -12,8 +12,8 @@ namespace QuanLyBanHang.Models.Entities
             NgayTao = DateTimeOffset.Now;
         }
 
-        public Guid TaiKhoanId { get; set; }
-        public Guid SanPhamId { get; set; }
+        public int TaiKhoanId { get; set; }
+        public int SanPhamId { get; set; }
         public DateTimeOffset NgayTao { get; set; }
 
         public virtual TaiKhoan TaiKhoan { get; set; }

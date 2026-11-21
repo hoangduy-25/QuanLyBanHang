@@ -66,7 +66,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             };
         }
 
-        public Task<DanhGia> GetActiveDetailByIdAsync(Guid id)
+        public Task<DanhGia> GetActiveDetailByIdAsync(int id)
         {
             return DbSet
                 .Include(dg => dg.TaiKhoan)
@@ -76,13 +76,13 @@ namespace QuanLyBanHang.Repositories.Implementations
                 .FirstOrDefaultAsync(dg => dg.Id == id && !dg.IsDeleted);
         }
 
-        public Task<DanhGia> GetByDonHangAndSanPhamAsync(Guid donHangId, Guid sanPhamId)
+        public Task<DanhGia> GetByDonHangAndSanPhamAsync(int donHangId, int sanPhamId)
         {
             return DbSet.FirstOrDefaultAsync(dg =>
                 dg.DonHangId == donHangId && dg.SanPhamId == sanPhamId && !dg.IsDeleted);
         }
 
-        public Task<ThichDanhGia> GetThichAsync(Guid taiKhoanId, Guid danhGiaId)
+        public Task<ThichDanhGia> GetThichAsync(int taiKhoanId, int danhGiaId)
         {
             return Context.ThichDanhGias
                 .FirstOrDefaultAsync(t => t.TaiKhoanId == taiKhoanId && t.DanhGiaId == danhGiaId);
@@ -98,12 +98,12 @@ namespace QuanLyBanHang.Repositories.Implementations
             Context.ThichDanhGias.Remove(thich);
         }
 
-        public Task<int> CountThichAsync(Guid danhGiaId)
+        public Task<int> CountThichAsync(int danhGiaId)
         {
             return Context.ThichDanhGias.CountAsync(t => t.DanhGiaId == danhGiaId);
         }
 
-        public Task<PhanHoiDanhGia> GetPhanHoiByDanhGiaIdAsync(Guid danhGiaId)
+        public Task<PhanHoiDanhGia> GetPhanHoiByDanhGiaIdAsync(int danhGiaId)
         {
             return Context.PhanHoiDanhGias.FirstOrDefaultAsync(p => p.DanhGiaId == danhGiaId);
         }

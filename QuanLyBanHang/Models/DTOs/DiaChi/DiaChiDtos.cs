@@ -6,7 +6,7 @@ namespace QuanLyBanHang.Models.DTOs.DiaChi
     // UC-07: GET /api/dia-chi
     public class DiaChiResponse
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string TenNguoiNhan { get; set; }
         public string SoDienThoai { get; set; }
         public string TinhThanh { get; set; }

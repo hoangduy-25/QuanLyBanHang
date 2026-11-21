@@ -1,0 +1,101 @@
+﻿@{ ViewBag.Title = "Thanh toán"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0">Đặt hàng &amp; Thanh toán</h4>
+    <a href="@Url.Action("Index", "GioHang")" class="btn btn-light border btn-sm hc-pill px-3">&larr; Quay lại giỏ hàng</a>
+</div>
+<div id="co-err" class="alert alert-danger d-none"></div>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="hc-card p-4 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0">1. Địa chỉ nhận hàng</h6>
+                <a href="@Url.Action("Index", "TaiKhoan")" class="btn btn-light border btn-sm hc-pill">+ Thêm địa chỉ mới</a>
+            </div>
+            <div id="co-addrs">Đang tải địa chỉ...</div>
+        </div>
+        <div class="hc-card p-4 mb-3">
+            <h6 class="fw-bold mb-3">2. Mã giảm giá (Voucher)</h6>
+            <div class="input-group mb-2">
+                <input id="co-code" class="form-control hc-pill me-2" placeholder="Nhập mã giảm giá..." />
+                <button class="btn hc-btn-primary px-4" type="button" onclick="refreshPreview()">Áp dụng</button>
+            </div>
+            <div id="co-vouchers" class="d-flex flex-wrap gap-2 mt-2"></div>
+        </div>
+        <div class="hc-card p-4">
+            <h6 class="fw-bold mb-3">3. Phương thức thanh toán</h6>
+            <div class="d-grid gap-2">
+                <label class="border rounded-3 p-3 d-flex align-items-center gap-2"><input type="radio" name="pttt" value="KhiNhanHang" checked onchange="refreshPreview()" /> <span><strong>COD</strong> — Thanh toán khi nhận hàng</span></label>
+                <label class="border rounded-3 p-3 d-flex align-items-center gap-2"><input type="radio" name="pttt" value="ChuyenKhoan" onchange="refreshPreview()" /> <span><strong>VietQR</strong> — Chuyển khoản ngân hàng</span></label>
+                <label class="border rounded-3 p-3 d-flex align-items-center gap-2"><input type="radio" name="pttt" value="ViDienTu" onchange="refreshPreview()" /> <span><strong>MoMo / VNPAY</strong> — Ví điện tử</span></label>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="hc-card p-4">
+            <h6 class="fw-bold mb-3">Chi tiết đơn đặt hàng</h6>
+            <div id="co-summary" class="small">Đang tính toán...</div>
+            <button class="btn hc-btn-primary w-100 py-2 mt-3" type="button" onclick="submitOrder()">Xác nhận đặt hàng</button>
+        </div>
+    </div>
+</div>
+@section scripts {
+<script>
+function getSelectedAddr() {
+    const r = document.querySelector("input[name='coAddr']:checked");
+    return r ? r.value : null;
+}
+function getSelectedPttt() {
+    const r = document.querySelector("input[name='pttt']:checked");
+    return r ? r.value : "KhiNhanHang";
+}
+async function initCo() {
+    const addrs = await HCShopApi.request("/api/dia-chi");
+    const box = document.getElementById("co-addrs");
+    if (!addrs.data.length) {
+        box.innerHTML = `<div class="alert alert-warning mb-0">Bạn chưa có địa chỉ nhận hàng. Vui lòng vào <a href="/TaiKhoan">Sổ địa chỉ</a> để thêm trước khi đặt hàng.</div>`;
+    } else {
+        box.innerHTML = addrs.data.map(a => `
+            <label class="border rounded-3 p-3 mb-2 d-flex gap-2 align-items-start w-100">
+                <input type="radio" name="coAddr" value="${a.id}" ${a.macDinh ? "checked" : ""} onchange="refreshPreview()" />
+                <div><strong>${a.tenNguoiNhan}</strong> (${a.soDienThoai}) ${a.macDinh ? '<span class="badge hc-badge-success">Mặc định</span>' : ''}<div class="small text-muted">${a.diaChiDayDu}</div></div>
+            </label>`).join("");
+    }
+    const vs = await HCShopApi.request("/api/ma-giam-gia");
+    if (vs && vs.data) {
+        document.getElementById("co-vouchers").innerHTML = vs.data.slice(0, 4).map(v =>
+            `<button type="button" class="btn btn-light border btn-sm hc-pill" onclick="document.getElementById('co-code').value='${v.ma}';refreshPreview()">${v.ma}</button>`
+        ).join("");
+    }
+    await refreshPreview();
+}
+async function refreshPreview() {
+    const err = document.getElementById("co-err");
+    err.classList.add("d-none");
+    try {
+        const res = await HCShopApi.request("/api/dat-hang/xem-truoc", {
+            method: "POST",
+            body: JSON.stringify({ diaChiId: parseInt(getSelectedAddr() || '0') || null, maGiamGia: document.getElementById("co-code").value || null, phuongThucThanhToan: getSelectedPttt() })
+        });
+        document.getElementById("co-summary").innerHTML = `
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted">Tạm tính</span><strong>${HCShopApi.formatVnd(res.data.tamTinh)}</strong></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted">Giảm giá</span><strong class="text-success">-${HCShopApi.formatVnd(res.data.tienGiam)}</strong></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted">Phí giao hàng</span><strong class="text-success">Miễn phí</strong></div>
+            <hr/>
+            <div class="d-flex justify-content-between fs-5"><strong>Tổng thanh toán</strong><strong>${HCShopApi.formatVnd(res.data.tongThanhToan)}</strong></div>`;
+    } catch (e) { err.classList.remove("d-none"); err.textContent = e.message; }
+}
+async function submitOrder() {
+    const err = document.getElementById("co-err");
+    err.classList.add("d-none");
+    try {
+        const res = await HCShopApi.request("/api/dat-hang/xac-nhan", {
+            method: "POST",
+            body: JSON.stringify({ diaChiId: parseInt(getSelectedAddr() || '0') || null, maGiamGia: document.getElementById("co-code").value || null, phuongThucThanhToan: getSelectedPttt() })
+        });
+        alert("Đặt hàng thành công! Mã đơn: " + res.data.maDon);
+        window.location.href = "/DonHang";
+    } catch (e) { err.classList.remove("d-none"); err.textContent = e.message; }
+}
+document.addEventListener("DOMContentLoaded", initCo);
+</script>
+}

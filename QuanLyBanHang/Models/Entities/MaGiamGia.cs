@@ -19,7 +19,7 @@ namespace QuanLyBanHang.Models.Entities
             DonHangs = new HashSet<DonHang>();
         }
 
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string Ma { get; set; }
         public string MoTa { get; set; }
         public string Loai { get; set; }

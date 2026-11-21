@@ -20,7 +20,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-29: Xem giỏ hàng
-        public async Task<GioHangResponse> XemGioHangAsync(Guid taiKhoanId)
+        public async Task<GioHangResponse> XemGioHangAsync(int taiKhoanId)
         {
             var gh = await _uow.GioHangs.GetByTaiKhoanIdWithDetailsAsync(taiKhoanId);
             if (gh == null)
@@ -30,7 +30,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-30: Thêm sản phẩm vào giỏ hàng
-        public async Task<GioHangResponse> ThemSanPhamAsync(Guid taiKhoanId, ThemVaoGioRequest request)
+        public async Task<GioHangResponse> ThemSanPhamAsync(int taiKhoanId, ThemVaoGioRequest request)
         {
             var sp = await _uow.SanPhams.GetDetailByIdAsync(request.SanPhamId, true);
             if (sp == null)
@@ -76,7 +76,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-31: Chỉnh sửa số lượng sản phẩm trong giỏ
-        public async Task<GioHangResponse> SuaSoLuongAsync(Guid taiKhoanId, Guid sanPhamId, SuaSoLuongGioRequest request)
+        public async Task<GioHangResponse> SuaSoLuongAsync(int taiKhoanId, int sanPhamId, SuaSoLuongGioRequest request)
         {
             var gh = await _uow.GioHangs.GetByTaiKhoanIdWithDetailsAsync(taiKhoanId);
             if (gh == null)
@@ -112,7 +112,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-32: Xóa sản phẩm khỏi giỏ hàng
-        public async Task<GioHangResponse> XoaSanPhamAsync(Guid taiKhoanId, Guid sanPhamId)
+        public async Task<GioHangResponse> XoaSanPhamAsync(int taiKhoanId, int sanPhamId)
         {
             var gh = await _uow.GioHangs.GetByTaiKhoanIdWithDetailsAsync(taiKhoanId);
             if (gh == null)
@@ -130,7 +130,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-33: Xem danh sách yêu thích
-        public async Task<List<YeuThichItemResponse>> XemYeuThichAsync(Guid taiKhoanId)
+        public async Task<List<YeuThichItemResponse>> XemYeuThichAsync(int taiKhoanId)
         {
             var list = await _uow.GioHangs.GetYeuThichByTaiKhoanAsync(taiKhoanId);
             return list.Select(yt =>
@@ -151,7 +151,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-33: Thêm sản phẩm yêu thích
-        public async Task ThemYeuThichAsync(Guid taiKhoanId, Guid sanPhamId)
+        public async Task ThemYeuThichAsync(int taiKhoanId, int sanPhamId)
         {
             var sp = await _uow.SanPhams.GetDetailByIdAsync(sanPhamId, true);
             if (sp == null)
@@ -171,7 +171,7 @@ namespace QuanLyBanHang.Services.Implementations
         }
 
         // UC-33: Bỏ sản phẩm yêu thích
-        public async Task XoaYeuThichAsync(Guid taiKhoanId, Guid sanPhamId)
+        public async Task XoaYeuThichAsync(int taiKhoanId, int sanPhamId)
         {
             var existing = await _uow.GioHangs.GetYeuThichAsync(taiKhoanId, sanPhamId);
             if (existing == null)

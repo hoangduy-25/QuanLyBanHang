@@ -22,14 +22,14 @@ namespace QuanLyBanHang.Repositories.Implementations
                 t.Email.ToLower() == normalized || t.SoDienThoai == normalized);
         }
 
-        public Task<bool> ExistsEmailAsync(string email, Guid? excludeId = null)
+        public Task<bool> ExistsEmailAsync(string email, int? excludeId = null)
         {
             var normalized = (email ?? string.Empty).Trim().ToLower();
             return DbSet.AnyAsync(t =>
                 t.Email.ToLower() == normalized && (!excludeId.HasValue || t.Id != excludeId.Value));
         }
 
-        public Task<bool> ExistsPhoneAsync(string phone, Guid? excludeId = null)
+        public Task<bool> ExistsPhoneAsync(string phone, int? excludeId = null)
         {
             var normalized = (phone ?? string.Empty).Trim();
             return DbSet.AnyAsync(t =>
@@ -84,7 +84,7 @@ namespace QuanLyBanHang.Repositories.Implementations
             Context.LichSuKhoaTaiKhoans.Add(lichSu);
         }
 
-        public Task<List<LichSuKhoaTaiKhoan>> GetLichSuKhoaAsync(Guid taiKhoanId)
+        public Task<List<LichSuKhoaTaiKhoan>> GetLichSuKhoaAsync(int taiKhoanId)
         {
             return Context.LichSuKhoaTaiKhoans
                 .AsNoTracking()
