@@ -23,13 +23,13 @@ export const WishlistPage: React.FC = () => {
     categories.find((c) => c.id === catId)?.name ?? 'Danh mục';
 
   // MAJ-04: Không dùng bulk cart API — gọi tuần tự POST /api/gio-hang/san-pham cho từng sản phẩm hợp lệ
-  const handleMoveAllToCart = () => {
+  const handleMoveAllToCart = async () => {
     let addedCount = 0;
     let cappedCount = 0;
     let skippedCount = 0;
 
-    wishlistProducts.forEach((p) => {
-      const res = addToCart(p.id, 1);
+    for (const p of wishlistProducts) {
+      const res = await addToCart(p.id, 1);
       if (!res.ok) {
         skippedCount += 1;
       } else if (res.message.includes('vượt tồn kho')) {
@@ -37,7 +37,7 @@ export const WishlistPage: React.FC = () => {
       } else {
         addedCount += 1;
       }
-    });
+    }
 
     const parts: string[] = [];
     if (addedCount > 0) parts.push(`đã thêm ${addedCount} sản phẩm vào giỏ`);
@@ -132,7 +132,7 @@ export const WishlistPage: React.FC = () => {
                   {/* Remove from wishlist button */}
                   <button
                     type="button"
-                    onClick={() => toggleWishlist(product.id)}
+                    onClick={() => void toggleWishlist(product.id)}
                     aria-label="Xóa khỏi yêu thích"
                     title="Bỏ yêu thích"
                     className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center border border-zinc-200/60 shadow-sm text-rose-500 hover:bg-rose-50 transition-colors"
@@ -177,8 +177,8 @@ export const WishlistPage: React.FC = () => {
                     <button
                       type="button"
                       disabled={isOutOfStock || isUnavailable}
-                      onClick={() => {
-                        const res = addToCart(product.id, 1);
+                      onClick={async () => {
+                        const res = await addToCart(product.id, 1);
                         setBannerMessage(res.message);
                         setTimeout(() => setBannerMessage(null), 2500);
                       }}

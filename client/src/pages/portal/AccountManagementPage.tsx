@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Search,
   Lock,
@@ -37,6 +37,7 @@ export const AccountManagementPage: React.FC = () => {
     users,
     orders,
     accountLockHistories,
+    loadAccountLockHistory,
     toggleAccountLock,
   } = useApp();
 
@@ -109,12 +110,18 @@ export const AccountManagementPage: React.FC = () => {
     return accountLockHistories.filter((h) => h.userId === historyUser.id);
   }, [historyUser, accountLockHistories]);
 
-  const handleConfirmLock = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (historyUser) {
+      void loadAccountLockHistory(historyUser.id);
+    }
+  }, [historyUser, loadAccountLockHistory]);
+
+  const handleConfirmLock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lockingUser) return;
     const reason =
       selectedReason === 'Lý do khác' ? customReason.trim() : selectedReason;
-    const res = toggleAccountLock(lockingUser.id, reason);
+    const res = await toggleAccountLock(lockingUser.id, reason);
     setFeedback({ ok: res.ok, text: res.message });
     if (res.ok) {
       setLockingUser(null);
@@ -122,8 +129,8 @@ export const AccountManagementPage: React.FC = () => {
     }
   };
 
-  const handleUnlock = (user: User) => {
-    const res = toggleAccountLock(user.id);
+  const handleUnlock = async (user: User) => {
+    const res = await toggleAccountLock(user.id);
     setFeedback({ ok: res.ok, text: res.message });
   };
 

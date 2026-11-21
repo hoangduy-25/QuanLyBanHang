@@ -200,9 +200,9 @@ export const InventoryManagementPage: React.FC = () => {
     setShowAdjustModal(true);
   };
 
-  const handleImportSubmit = (e: React.FormEvent) => {
+  const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = importStock({
+    const res = await importStock({
       productId: importProductId,
       quantity: Number(importQty),
       importPrice: importPrice.trim() ? Number(importPrice) : undefined,
@@ -215,13 +215,13 @@ export const InventoryManagementPage: React.FC = () => {
     }
   };
 
-  const handleAdjustSubmit = (e: React.FormEvent) => {
+  const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalReason =
       adjustReasonPreset === 'Lý do khác'
         ? adjustCustomReason.trim()
         : adjustReasonPreset;
-    const res = adjustStockDecrease({
+    const res = await adjustStockDecrease({
       productId: adjustProductId,
       quantityToSubtract: Number(adjustQty),
       reason: finalReason,
@@ -232,10 +232,10 @@ export const InventoryManagementPage: React.FC = () => {
     }
   };
 
-  const handleThresholdSubmit = (e: React.FormEvent) => {
+  const handleThresholdSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!thresholdProduct) return;
-    const res = updateMinStockThreshold(
+    const res = await updateMinStockThreshold(
       thresholdProduct.id,
       Number(thresholdValue)
     );

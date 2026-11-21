@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using QuanLyBanHang.Infrastructure.Filters;
+using QuanLyBanHang.Infrastructure.Handlers;
 
 namespace QuanLyBanHang
 {
@@ -9,7 +10,10 @@ namespace QuanLyBanHang
     {
         public static void Register(HttpConfiguration config)
         {
-            // Bật Attribute Routing ([RoutePrefix], [Route]) cho 71 RESTful API
+            // Hỗ trợ CORS & Preflight OPTIONS cho React SPA (Vite dev server :5173)
+            config.MessageHandlers.Add(new CorsMessageHandler());
+
+            // Bật Attribute Routing ([RoutePrefix], [Route]) cho hệ thống RESTful API
             config.MapHttpAttributeRoutes();
 
             config.Routes.MapHttpRoute(

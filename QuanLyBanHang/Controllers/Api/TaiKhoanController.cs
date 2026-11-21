@@ -71,5 +71,14 @@ namespace QuanLyBanHang.Controllers.Api
             var res = await _service.MoKhoaAsync(CurrentUserId.Value, id);
             return OkApi(res, "Mở khóa tài khoản khách hàng thành công.");
         }
+
+        // UC-10: GET /api/tai-khoan/{id}/lich-su-khoa (Quản lý)
+        [HttpGet, Route("{id:int}/lich-su-khoa")]
+        [JwtAuthorize(Roles = "QuanLy")]
+        public async Task<IHttpActionResult> XemLichSuKhoa(int id)
+        {
+            var res = await _service.XemLichSuKhoaAsync(id);
+            return OkApi(res);
+        }
     }
 }

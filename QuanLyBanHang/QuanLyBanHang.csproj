@@ -151,15 +151,7 @@
     <Compile Include="Controllers\Api\TaiKhoanController.cs" />
     <Compile Include="Controllers\Api\UploadController.cs" />
     <Compile Include="Controllers\Api\XacThucController.cs" />
-    <Compile Include="Controllers\BaseMvcController.cs" />
-    <Compile Include="Controllers\DonHangController.cs" />
-    <Compile Include="Controllers\GioHangController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
-    <Compile Include="Controllers\MaGiamGiaController.cs" />
-    <Compile Include="Controllers\QuanTriController.cs" />
-    <Compile Include="Controllers\SanPhamController.cs" />
-    <Compile Include="Controllers\TaiKhoanController.cs" />
-    <Compile Include="Controllers\XacThucController.cs" />
     <Compile Include="Data\Configurations\BienDongKhoConfiguration.cs" />
     <Compile Include="Data\Configurations\ChiTietDonHangConfiguration.cs" />
     <Compile Include="Data\Configurations\ChiTietGioHangConfiguration.cs" />
@@ -185,6 +177,7 @@
     <Compile Include="Infrastructure\Filters\GlobalExceptionFilterAttribute.cs" />
     <Compile Include="Infrastructure\Filters\JwtAuthorizeAttribute.cs" />
     <Compile Include="Infrastructure\Filters\ValidateModelAttribute.cs" />
+    <Compile Include="Infrastructure\Handlers\CorsMessageHandler.cs" />
     <Compile Include="Models\DTOs\BaoCao\BaoCaoDtos.cs" />
     <Compile Include="Models\DTOs\Common\CommonDtos.cs" />
     <Compile Include="Models\DTOs\DanhGia\DanhGiaDtos.cs" />
@@ -272,6 +265,7 @@
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
     <Content Include="Data\CapNhat_MatKhau_Mau.sql" />
+    <Content Include="Data\SQL_QuanLyBanHang_DuLieuMau.sql" />
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
@@ -370,6 +364,12 @@
   </Target>
   <Target Name="AfterBuild">
   </Target> -->
+  <Target Name="EnsureRoslynBinaries" AfterTargets="AfterBuild">
+    <ItemGroup>
+      <_RoslynToolFiles Include="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\tools\RoslynLatest\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_RoslynToolFiles)" DestinationFolder="$(OutputPath)roslyn" SkipUnchangedFiles="true" Condition="'@(_RoslynToolFiles)' != ''" />
+  </Target>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>

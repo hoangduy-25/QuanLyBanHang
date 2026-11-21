@@ -18,18 +18,18 @@ namespace QuanLyBanHang.Controllers.Api
             _service = new DonHangService(UnitOfWork);
         }
 
-        // UC-38: GET /api/don-hang (Khách hàng, Nhân viên)
+        // UC-38: GET /api/don-hang (Khách hàng, Nhân viên, Quản lý chỉ xem)
         [HttpGet, Route("")]
-        [JwtAuthorize(Roles = "KhachHang,NhanVien")]
+        [JwtAuthorize(Roles = "KhachHang,NhanVien,QuanLy")]
         public async Task<IHttpActionResult> XemDanhSach([FromUri] DonHangFilterQuery query)
         {
             var res = await _service.XemDanhSachAsync(CurrentUserId.Value, CurrentUserRole, query);
             return OkApi(res);
         }
 
-        // UC-39: GET /api/don-hang/{id} (Khách hàng, Nhân viên)
+        // UC-39: GET /api/don-hang/{id} (Khách hàng, Nhân viên, Quản lý chỉ xem)
         [HttpGet, Route("{id:int}")]
-        [JwtAuthorize(Roles = "KhachHang,NhanVien")]
+        [JwtAuthorize(Roles = "KhachHang,NhanVien,QuanLy")]
         public async Task<IHttpActionResult> XemChiTiet(int id)
         {
             var res = await _service.XemChiTietAsync(CurrentUserId.Value, CurrentUserRole, id);

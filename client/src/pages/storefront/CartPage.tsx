@@ -79,20 +79,20 @@ export const CartPage: React.FC = () => {
   );
   const totalQuantity = availableItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  const handleStepQuantity = (productId: string, nextQty: number) => {
+  const handleStepQuantity = async (productId: string, nextQty: number) => {
     if (nextQty === 0) {
       // UC-31 2b: Số lượng bằng 0 -> Hỏi xác nhận xóa (UC-32)
       setConfirmRemoveId(productId);
       return;
     }
-    const res = updateCartQuantity(productId, nextQty);
+    const res = await updateCartQuantity(productId, nextQty);
     if (!res.ok || res.message.includes('vượt tồn kho')) {
       showToast(res.message);
     }
   };
 
-  const handleConfirmRemove = (productId: string) => {
-    const res = removeFromCart(productId);
+  const handleConfirmRemove = async (productId: string) => {
+    const res = await removeFromCart(productId);
     setConfirmRemoveId(null);
     showToast(res.message);
   };

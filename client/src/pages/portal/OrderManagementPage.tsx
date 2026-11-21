@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Search,
   CheckCircle2,
@@ -67,6 +67,7 @@ export const OrderManagementPage: React.FC = () => {
   const {
     currentUser,
     orders,
+    loadOrderDetail,
     staffConfirmOrRejectOrder,
     staffAdvanceOrderStatus,
   } = useApp();
@@ -149,8 +150,14 @@ export const OrderManagementPage: React.FC = () => {
     return paginatedOrders[0] || filteredOrders[0] || null;
   }, [orders, paginatedOrders, filteredOrders, selectedOrderId]);
 
-  const handleConfirmOrder = (orderId: string) => {
-    const res = staffConfirmOrRejectOrder(
+  useEffect(() => {
+    if (selectedOrderId) {
+      void loadOrderDetail(selectedOrderId);
+    }
+  }, [selectedOrderId, loadOrderDetail]);
+
+  const handleConfirmOrder = async (orderId: string) => {
+    const res = await staffConfirmOrRejectOrder(
       orderId,
       'CONFIRM',
       statusNote.trim() || undefined
@@ -159,12 +166,12 @@ export const OrderManagementPage: React.FC = () => {
     if (res.ok) setStatusNote('');
   };
 
-  const handleRejectSubmit = (e: React.FormEvent) => {
+  const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingOrder) return;
     const reason =
       rejectPreset === 'Lý do khác' ? rejectCustom.trim() : rejectPreset;
-    const res = staffConfirmOrRejectOrder(rejectingOrder.id, 'REJECT', reason);
+    const res = await staffConfirmOrRejectOrder(rejectingOrder.id, 'REJECT', reason);
     setFeedback({ ok: res.ok, text: res.message });
     if (res.ok) {
       setRejectingOrder(null);
@@ -172,8 +179,8 @@ export const OrderManagementPage: React.FC = () => {
     }
   };
 
-  const handleAdvanceStatus = (orderId: string, nextStatus: OrderStatus) => {
-    const res = staffAdvanceOrderStatus(
+  const handleAdvanceStatus = async (orderId: string, nextStatus: OrderStatus) => {
+    const res = await staffAdvanceOrderStatus(
       orderId,
       nextStatus,
       statusNote.trim() || undefined

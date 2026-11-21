@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:aspnet": "tsc -b && vite build --base=/ClientApp/ --outDir ../QuanLyBanHang/ClientApp --emptyOutDir",
     "preview": "vite preview"
   },
   "dependencies": {

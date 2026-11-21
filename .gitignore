@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+
+# Frontend React/Vite (client/) - Giữ lại QuanLyBanHang/ClientApp/ trong Git để máy không cài Node.js vẫn F5 chạy ngay
+client/node_modules/
+client/dist/
+client/.env.local

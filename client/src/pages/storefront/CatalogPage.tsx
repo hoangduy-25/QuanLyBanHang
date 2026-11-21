@@ -117,15 +117,15 @@ export const CatalogPage: React.FC = () => {
     setTimeout(() => setToastMsg(null), 2500);
   };
 
-  const handleQuickAdd = (e: React.MouseEvent, productId: string) => {
+  const handleQuickAdd = async (e: React.MouseEvent, productId: string) => {
     e.stopPropagation();
-    const res = addToCart(productId, 1);
+    const res = await addToCart(productId, 1);
     showToast(res.message);
   };
 
-  const handleToggleWish = (e: React.MouseEvent, productId: string) => {
+  const handleToggleWish = async (e: React.MouseEvent, productId: string) => {
     e.stopPropagation();
-    const res = toggleWishlist(productId);
+    const res = await toggleWishlist(productId);
     showToast(res.message);
   };
 

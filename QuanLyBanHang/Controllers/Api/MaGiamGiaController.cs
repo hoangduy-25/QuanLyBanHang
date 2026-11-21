@@ -18,27 +18,27 @@ namespace QuanLyBanHang.Controllers.Api
             _service = new MaGiamGiaService(UnitOfWork);
         }
 
-        // UC-45: GET /api/ma-giam-gia (Khách hàng, Quản lý)
+        // UC-45: GET /api/ma-giam-gia (Công khai / Khách hàng chỉ xem mã khả dụng; Quản lý xem tất cả)
         [HttpGet, Route("")]
-        [JwtAuthorize(Roles = "KhachHang,QuanLy")]
+        [JwtAuthorize(Optional = true)]
         public async Task<IHttpActionResult> XemDanhSach()
         {
             var res = await _service.XemDanhSachAsync(IsManager);
             return OkApi(res);
         }
 
-        // UC-46: GET /api/ma-giam-gia/tim-kiem (Khách hàng, Quản lý)
+        // UC-46: GET /api/ma-giam-gia/tim-kiem (Công khai / Khách hàng / Quản lý)
         [HttpGet, Route("tim-kiem")]
-        [JwtAuthorize(Roles = "KhachHang,QuanLy")]
+        [JwtAuthorize(Optional = true)]
         public async Task<IHttpActionResult> TimKiem([FromUri] string tuKhoa = null)
         {
             var res = await _service.TimKiemAsync(tuKhoa, IsManager);
             return OkApi(res);
         }
 
-        // UC-47: GET /api/ma-giam-gia/{id} (Khách hàng, Quản lý)
+        // UC-47: GET /api/ma-giam-gia/{id} (Công khai / Khách hàng / Quản lý)
         [HttpGet, Route("{id:int}")]
-        [JwtAuthorize(Roles = "KhachHang,QuanLy")]
+        [JwtAuthorize(Optional = true)]
         public async Task<IHttpActionResult> XemChiTiet(int id)
         {
             var res = await _service.XemChiTietAsync(id, IsManager);

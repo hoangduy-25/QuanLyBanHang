@@ -32,6 +32,7 @@ export const CatalogManagementPage: React.FC = () => {
     products,
     categories,
     orders,
+    loadProductDetail,
     createProduct,
     updateProduct,
     toggleProductVisibility,
@@ -139,7 +140,7 @@ export const CatalogManagementPage: React.FC = () => {
     setShowProductModal(true);
   };
 
-  const openEditProduct = (prd: Product) => {
+  const openEditProduct = async (prd: Product) => {
     setEditingProduct(prd);
     setPrdCode(prd.code);
     setPrdName(prd.name);
@@ -148,21 +149,25 @@ export const CatalogManagementPage: React.FC = () => {
     setPrdDescription(prd.description);
     setPrdImageUrl(prd.imageUrl || '');
     setShowProductModal(true);
+    const detail = await loadProductDetail(prd.id);
+    if (detail) {
+      setPrdDescription(detail.description || '');
+    }
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const priceNum = Number(prdPrice);
 
     const res = editingProduct
-      ? updateProduct(editingProduct.id, {
+      ? await updateProduct(editingProduct.id, {
           name: prdName,
           categoryId: prdCategoryId,
           price: priceNum,
           description: prdDescription,
           imageUrl: prdImageUrl || undefined,
         })
-      : createProduct({
+      : await createProduct({
           code: prdCode,
           name: prdName,
           categoryId: prdCategoryId,
@@ -197,15 +202,15 @@ export const CatalogManagementPage: React.FC = () => {
     setShowCategoryModal(true);
   };
 
-  const handleSaveCategory = (e: React.FormEvent) => {
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     const res = editingCategory
-      ? updateCategory(editingCategory.id, {
+      ? await updateCategory(editingCategory.id, {
           name: catName,
           description: catDescription,
           imageUrl: catImageUrl || undefined,
         })
-      : createCategory({
+      : await createCategory({
           name: catName,
           description: catDescription,
           imageUrl: catImageUrl || undefined,
@@ -709,6 +714,7 @@ export const CatalogManagementPage: React.FC = () => {
             )}
 
             <ImageUploadField
+              uploadFolder="products"
               label="Hình ảnh sản phẩm"
               value={prdImageUrl}
               onChange={setPrdImageUrl}
@@ -795,6 +801,7 @@ export const CatalogManagementPage: React.FC = () => {
             </div>
 
             <ImageUploadField
+              uploadFolder="categories"
               label="Hình ảnh danh mục (tùy chọn)"
               value={catImageUrl}
               onChange={setCatImageUrl}
@@ -897,17 +904,17 @@ export const CatalogManagementPage: React.FC = () => {
             : 'Xác nhận'
         }
         onCancel={() => setConfirmAction(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!confirmAction) return;
           let res: { ok: boolean; message: string };
           if (confirmAction.type === 'DELETE_PRODUCT') {
-            res = deleteProduct(confirmAction.product.id);
+            res = await deleteProduct(confirmAction.product.id);
           } else if (confirmAction.type === 'TOGGLE_PRODUCT') {
-            res = toggleProductVisibility(confirmAction.product.id);
+            res = await toggleProductVisibility(confirmAction.product.id);
           } else if (confirmAction.type === 'DELETE_CATEGORY') {
-            res = deleteCategory(confirmAction.category.id);
+            res = await deleteCategory(confirmAction.category.id);
           } else {
-            res = toggleCategoryVisibility(confirmAction.category.id);
+            res = await toggleCategoryVisibility(confirmAction.category.id);
           }
           setFeedback({ ok: res.ok, text: res.message });
           setConfirmAction(null);

@@ -20,8 +20,36 @@ import { Voucher } from '../../types/domain';
 import { formatVND, formatDate } from '../../utils/formatters';
 
 export const VoucherWalletPage: React.FC = () => {
-  const { vouchers, cart, products, validateVoucherCode } = useApp();
+  const { vouchers, cart, products } = useApp();
   const navigate = useNavigate();
+
+  const estimateVoucherForCart = (
+    v: Voucher,
+    subtotal: number
+  ): { ok: boolean; discountAmount: number; message: string } => {
+    if (subtotal < v.minOrderValue) {
+      return {
+        ok: false,
+        discountAmount: 0,
+        message: `Đơn tối thiểu ${formatVND(v.minOrderValue)} (còn thiếu ${formatVND(
+          v.minOrderValue - subtotal
+        )}).`,
+      };
+    }
+    let discount =
+      v.discountType === 'PhanTram'
+        ? Math.round((subtotal * v.discountValue) / 100)
+        : v.discountValue;
+    if (
+      v.discountType === 'PhanTram' &&
+      v.maxDiscountAmount &&
+      discount > v.maxDiscountAmount
+    ) {
+      discount = v.maxDiscountAmount;
+    }
+    discount = Math.min(discount, subtotal);
+    return { ok: true, discountAmount: discount, message: 'Đủ điều kiện áp dụng.' };
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -194,7 +222,7 @@ export const VoucherWalletPage: React.FC = () => {
             );
             const checkWithCurrentCart =
               currentCartSubtotal > 0
-                ? validateVoucherCode(voucher.code, currentCartSubtotal)
+                ? estimateVoucherForCart(voucher, currentCartSubtotal)
                 : null;
 
             return (

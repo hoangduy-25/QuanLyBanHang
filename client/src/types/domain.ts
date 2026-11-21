@@ -60,6 +60,7 @@ export interface Category {
 
 export interface Product {
   id: string;
+  tonKhoId?: number;
   code: string;
   name: string;
   categoryId: string;
@@ -70,6 +71,8 @@ export interface Product {
   minStockThreshold: number;
   isVisible: boolean;
   isDeleted: boolean;
+  averageRating?: number;
+  reviewCount?: number;
   lastSoldAt?: string;
   createdAt: string;
 }
@@ -100,6 +103,12 @@ export interface CartItem {
   productId: string;
   quantity: number;
   addedPrice: number;
+  currentPrice?: number;
+  isAvailable?: boolean;
+  unavailableReason?: string;
+  productName?: string;
+  productImage?: string;
+  stock?: number;
 }
 
 export type DiscountType = 'PhanTram' | 'SoTien';
@@ -178,6 +187,8 @@ export interface Review {
   images?: string[];
   isEdited: boolean;
   likedByUserIds: string[];
+  likeCount?: number;
+  isLikedByMe?: boolean;
   storeReply?: string;
   storeReplyAt?: string;
   storeReplyBy?: string;

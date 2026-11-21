@@ -135,7 +135,7 @@ export const VoucherManagementPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       code,
@@ -151,8 +151,8 @@ export const VoucherManagementPage: React.FC = () => {
     };
 
     const res = editingVoucher
-      ? updateVoucher(editingVoucher.id, payload)
-      : createVoucher(payload);
+      ? await updateVoucher(editingVoucher.id, payload)
+      : await createVoucher(payload);
 
     setFeedback({ ok: res.ok, text: res.message });
     if (res.ok) {
@@ -743,12 +743,12 @@ export const VoucherManagementPage: React.FC = () => {
             : 'Kích hoạt'
         }
         onCancel={() => setConfirmAction(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!confirmAction) return;
           const res =
             confirmAction.type === 'DELETE'
-              ? deleteVoucher(confirmAction.voucher.id)
-              : toggleVoucherActive(confirmAction.voucher.id);
+              ? await deleteVoucher(confirmAction.voucher.id)
+              : await toggleVoucherActive(confirmAction.voucher.id);
           setFeedback({ ok: res.ok, text: res.message });
           setConfirmAction(null);
         }}

@@ -8,7 +8,7 @@ import {
   UserRole,
 } from '../types/domain';
 
-export const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== 'false';
+export const IS_DEMO_MODE = false;
 
 export function formatVND(amount: number): string {
   return new Intl.NumberFormat('vi-VN', {

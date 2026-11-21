@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   AccountLockHistory,
   CartItem,
@@ -13,32 +13,57 @@ import {
   ShippingAddress,
   StockHistory,
   User,
-  UserRole,
   Voucher,
 } from '../types/domain';
 import {
-  createPlaceholderImage,
-  SEED_ACCOUNT_LOCK_HISTORIES,
-  SEED_ADDRESSES,
-  SEED_CATEGORIES,
-  SEED_ORDERS,
-  SEED_PRODUCTS,
-  SEED_REVIEWS,
-  SEED_STOCK_HISTORIES,
-  SEED_USERS,
-  SEED_VOUCHERS,
-} from '../data/mockData';
-import { isAddressInDeliveryZone } from '../data/vnLocations';
-import { formatVND, ROLE_LABELS } from '../utils/formatters';
+  clearAccessToken,
+  getAccessToken,
+  setAccessToken,
+  setUnauthorizedListener,
+} from '../services/apiClient';
+import {
+  accountApi,
+  addressApi,
+  authApi,
+  cartApi,
+  categoryApi,
+  checkoutApi,
+  inventoryApi,
+  orderApi,
+  productApi,
+  reviewApi,
+  voucherApi,
+} from '../services/hcshopApi';
+import {
+  mapBienDongKhoToStockHistory,
+  mapDanhGiaToReview,
+  mapDanhMucToCategory,
+  mapDiaChiToShippingAddress,
+  mapDonHangDetailToOrder,
+  mapDonHangListItemToOrder,
+  mapGioHangItemToCartItem,
+  mapHoSoToUser,
+  mapLichSuKhoaToModel,
+  mapMaGiamGiaToVoucher,
+  mapSanPhamToProduct,
+  mapTaiKhoanItemToUser,
+} from '../services/mappers';
 
-interface VoucherValidationResult {
+export interface VoucherValidationResult {
   ok: boolean;
   voucher?: Voucher;
   discountAmount: number;
   message: string;
 }
 
+export interface ActionResult {
+  ok: boolean;
+  message: string;
+}
+
 interface AppContextType {
+  isBootstrapping: boolean;
+  apiConnectionError: string | null;
   currentUser: User | null;
   users: User[];
   accountLockHistories: AccountLockHistory[];
@@ -54,47 +79,46 @@ interface AppContextType {
   searchQuery: string;
   selectedCategoryId: string;
 
-  // Actions
+  // UI & Data Refresh Helpers
   setSearchQuery: (q: string) => void;
   setSelectedCategoryId: (id: string) => void;
-  switchDemoRole: (roleOrGuest: UserRole | 'GUEST') => void;
-  resetDemoData: () => void;
+  refreshAllData: () => Promise<void>;
+  loadProductDetail: (productId: string) => Promise<Product | null>;
+  loadOrderDetail: (orderId: string) => Promise<Order | null>;
+  loadAccountLockHistory: (userId: string) => Promise<AccountLockHistory[]>;
 
   // Cart & Wishlist (UC-29..33)
-  addToCart: (productId: string, quantity?: number) => { ok: boolean; message: string };
+  addToCart: (productId: string, quantity?: number) => Promise<ActionResult>;
   updateCartQuantity: (
     productId: string,
     newQuantity: number
-  ) => { ok: boolean; confirmRemove?: boolean; message: string };
-  removeFromCart: (productId: string) => { ok: boolean; message: string };
-  toggleWishlist: (productId: string) => { added: boolean; message: string };
+  ) => Promise<{ ok: boolean; confirmRemove?: boolean; message: string }>;
+  removeFromCart: (productId: string) => Promise<ActionResult>;
+  toggleWishlist: (productId: string) => Promise<{ added: boolean; message: string }>;
 
   // Addresses, Vouchers & Atomic Checkout (UC-34..37, UC-40)
   addShippingAddress: (
     input: Omit<ShippingAddress, 'id' | 'userId'>
-  ) => { ok: boolean; address?: ShippingAddress; message: string };
+  ) => Promise<{ ok: boolean; address?: ShippingAddress; message: string }>;
   updateShippingAddress: (
     id: string,
     input: Omit<ShippingAddress, 'id' | 'userId'>
-  ) => { ok: boolean; message: string };
-  deleteShippingAddress: (id: string) => { ok: boolean; message: string };
-  setDefaultShippingAddress: (id: string) => { ok: boolean; message: string };
-  validateVoucherCode: (code: string, subtotal: number) => VoucherValidationResult;
+  ) => Promise<ActionResult>;
+  deleteShippingAddress: (id: string) => Promise<ActionResult>;
+  setDefaultShippingAddress: (id: string) => Promise<ActionResult>;
+  validateVoucherCode: (code: string, subtotal: number) => Promise<VoucherValidationResult>;
   placeOrder: (params: {
     addressId: string;
     paymentMethod: PaymentMethod;
     voucherCode?: string;
-  }) => { ok: boolean; order?: Order; message: string };
-  cancelCustomerOrder: (
-    orderId: string,
-    cancelReason: string
-  ) => { ok: boolean; message: string };
+  }) => Promise<{ ok: boolean; order?: Order; message: string }>;
+  cancelCustomerOrder: (orderId: string, cancelReason: string) => Promise<ActionResult>;
 
   // Auth & Profile (UC-01..06)
   loginUser: (
     identifier: string,
     password: string
-  ) => { ok: boolean; user?: User; message: string };
+  ) => Promise<{ ok: boolean; user?: User; message: string }>;
   registerUser: (input: {
     fullName: string;
     email: string;
@@ -103,40 +127,38 @@ interface AppContextType {
     confirmPassword: string;
     securityQuestion: string;
     securityAnswer: string;
-  }) => { ok: boolean; user?: User; message: string };
+  }) => Promise<{ ok: boolean; user?: User; message: string }>;
   logoutUser: () => void;
-  lookupUserForRecovery: (
-    identifier: string
-  ) => {
+  lookupUserForRecovery: (identifier: string) => Promise<{
     ok: boolean;
-    user?: User;
+    accountIdentifier?: string;
     securityQuestion?: string;
     isLockedOut?: boolean;
     message: string;
-  };
+  }>;
   resetPasswordBySecurityAnswer: (params: {
-    userId: string;
+    accountIdentifier: string;
     answer: string;
     newPassword: string;
     confirmPassword: string;
-  }) => { ok: boolean; isLockedOut?: boolean; message: string };
+  }) => Promise<{ ok: boolean; isLockedOut?: boolean; message: string }>;
   changePassword: (params: {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
-  }) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
   updateSecurityQuestion: (params: {
     currentPassword: string;
     securityQuestion: string;
     securityAnswer: string;
-  }) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
   updateProfile: (params: {
     fullName: string;
     phone: string;
     dob?: string;
     gender?: Gender;
     avatar?: string;
-  }) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
 
   // Reviews (UC-53..56)
   submitReview: (
@@ -145,35 +167,35 @@ interface AppContextType {
     comment: string,
     images?: string[],
     orderId?: string
-  ) => { ok: boolean; message: string };
-  deleteReview: (reviewId: string) => { ok: boolean; message: string };
-  toggleReviewLike: (reviewId: string) => { ok: boolean; message: string };
+  ) => Promise<ActionResult>;
+  deleteReview: (reviewId: string) => Promise<ActionResult>;
+  toggleReviewLike: (reviewId: string) => Promise<ActionResult>;
 
-  // Staff / Admin Order Processing
+  // Staff / Admin Order Processing (UC-41, UC-43..44)
   staffConfirmOrRejectOrder: (
     orderId: string,
     action: 'CONFIRM' | 'REJECT',
     reasonOrNote?: string
-  ) => { ok: boolean; message: string };
+  ) => Promise<ActionResult>;
   staffAdvanceOrderStatus: (
     orderId: string,
     nextStatus: OrderStatus,
     note?: string
-  ) => { ok: boolean; message: string };
+  ) => Promise<ActionResult>;
 
-  // Admin Category & Product Management
+  // Admin Category & Product Management (UC-13..16, UC-20..23)
   createCategory: (input: {
     name: string;
     description: string;
     imageUrl?: string;
     isVisible?: boolean;
-  }) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
   updateCategory: (
     id: string,
     input: { name: string; description: string; imageUrl?: string }
-  ) => { ok: boolean; message: string };
-  toggleCategoryVisibility: (id: string) => { ok: boolean; message: string };
-  deleteCategory: (id: string) => { ok: boolean; message: string };
+  ) => Promise<ActionResult>;
+  toggleCategoryVisibility: (id: string) => Promise<ActionResult>;
+  deleteCategory: (id: string) => Promise<ActionResult>;
 
   createProduct: (input: {
     code: string;
@@ -185,7 +207,7 @@ interface AppContextType {
     minStockThreshold: number;
     initialStock: number;
     isVisible?: boolean;
-  }) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
   updateProduct: (
     id: string,
     input: {
@@ -195,29 +217,26 @@ interface AppContextType {
       description: string;
       imageUrl?: string;
     }
-  ) => { ok: boolean; message: string };
-  toggleProductVisibility: (id: string) => { ok: boolean; message: string };
-  deleteProduct: (id: string) => { ok: boolean; message: string };
+  ) => Promise<ActionResult>;
+  toggleProductVisibility: (id: string) => Promise<ActionResult>;
+  deleteProduct: (id: string) => Promise<ActionResult>;
 
-  // Admin Inventory Management
+  // Admin Inventory Management (UC-24..28)
   importStock: (params: {
     productId: string;
     quantity: number;
     importPrice?: number;
     supplier?: string;
     note: string;
-  }) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
   adjustStockDecrease: (params: {
     productId: string;
     quantityToSubtract: number;
     reason: string;
-  }) => { ok: boolean; message: string };
-  updateMinStockThreshold: (
-    productId: string,
-    threshold: number
-  ) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
+  updateMinStockThreshold: (productId: string, threshold: number) => Promise<ActionResult>;
 
-  // Admin Voucher Management
+  // Admin Voucher Management (UC-48..50)
   createVoucher: (input: {
     code: string;
     description?: string;
@@ -229,7 +248,7 @@ interface AppContextType {
     endDate: string;
     usageLimit: number;
     isActive?: boolean;
-  }) => { ok: boolean; message: string };
+  }) => Promise<ActionResult>;
   updateVoucher: (
     id: string,
     input: {
@@ -243,911 +262,563 @@ interface AppContextType {
       endDate: string;
       usageLimit: number;
     }
-  ) => { ok: boolean; message: string };
-  toggleVoucherActive: (id: string) => { ok: boolean; message: string };
-  deleteVoucher: (id: string) => { ok: boolean; message: string };
+  ) => Promise<ActionResult>;
+  toggleVoucherActive: (id: string) => Promise<ActionResult>;
+  deleteVoucher: (id: string) => Promise<ActionResult>;
 
-  // Staff / Admin Review Moderation
-  replyToReview: (
-    reviewId: string,
-    replyContent: string
-  ) => { ok: boolean; message: string };
-  adminDeleteReview: (
-    reviewId: string,
-    reason: string
-  ) => { ok: boolean; message: string };
+  // Staff / Admin Review Moderation (UC-56..57)
+  replyToReview: (reviewId: string, replyContent: string) => Promise<ActionResult>;
+  adminDeleteReview: (reviewId: string, reason: string) => Promise<ActionResult>;
 
-  // Admin Account Management
-  toggleAccountLock: (
-    userId: string,
-    lockReason?: string
-  ) => { ok: boolean; message: string };
+  // Admin Account Management (UC-08..10)
+  toggleAccountLock: (userId: string, lockReason?: string) => Promise<ActionResult>;
 }
-
-const STORAGE_KEY = 'hcshop_state_v7';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+function toIsoDateOffset(dateInput: string, endOfDay = false): string {
+  if (!dateInput) return new Date().toISOString();
+  if (dateInput.includes('T')) return dateInput;
+  return endOfDay ? `${dateInput}T23:59:59+07:00` : `${dateInput}T00:00:00+07:00`;
+}
+
+function stripBaseUrlForSave(url?: string): string | null {
+  if (!url || !url.trim()) return null;
+  const trimmed = url.trim();
+  // Không lưu placeholder SVG data URI xuống DB
+  if (trimmed.startsWith('data:image/svg+xml')) return null;
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+  if (apiBase && trimmed.startsWith(apiBase)) {
+    return trimmed.slice(apiBase.length) || null;
+  }
+  return trimmed;
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(SEED_USERS);
-  const [accountLockHistories, setAccountLockHistories] = useState<AccountLockHistory[]>(
-    SEED_ACCOUNT_LOCK_HISTORIES
-  );
-  const [currentUser, setCurrentUser] = useState<User | null>(SEED_USERS[2]);
-  const [categories, setCategories] = useState<Category[]>(SEED_CATEGORIES);
-  const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
-  const [stockHistories, setStockHistories] = useState<StockHistory[]>(SEED_STOCK_HISTORIES);
-  const [vouchers, setVouchers] = useState<Voucher[]>(SEED_VOUCHERS);
-  const [orders, setOrders] = useState<Order[]>(SEED_ORDERS);
-  const [reviews, setReviews] = useState<Review[]>(SEED_REVIEWS);
-  const [addresses, setAddresses] = useState<ShippingAddress[]>(SEED_ADDRESSES);
-  const [cart, setCart] = useState<CartItem[]>([
-    { productId: 'prd-1', quantity: 1, addedPrice: 2100000 },
-    { productId: 'prd-2', quantity: 1, addedPrice: 1450000 },
-  ]);
-  const [wishlistProductIds, setWishlistProductIds] = useState<string[]>(['prd-2', 'prd-5']);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [apiConnectionError, setApiConnectionError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [accountLockHistories, setAccountLockHistories] = useState<AccountLockHistory[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [stockHistories, setStockHistories] = useState<StockHistory[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [addresses, setAddresses] = useState<ShippingAddress[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [wishlistProductIds, setWishlistProductIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
+
+  const productsRef = useRef<Product[]>(products);
+  productsRef.current = products;
+
+  const ordersRef = useRef<Order[]>(orders);
+  ordersRef.current = orders;
 
   useEffect(() => {
     document.documentElement.classList.remove('dark');
   }, []);
 
-  // Load persisted state on mount
+  const clearSessionState = useCallback(() => {
+    clearAccessToken();
+    setCurrentUser(null);
+    setUsers([]);
+    setAccountLockHistories([]);
+    setStockHistories([]);
+    setOrders([]);
+    setAddresses([]);
+    setCart([]);
+    setWishlistProductIds([]);
+  }, []);
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.users) setUsers(parsed.users);
-        if (parsed.accountLockHistories) setAccountLockHistories(parsed.accountLockHistories);
-        if (parsed.currentUser !== undefined) setCurrentUser(parsed.currentUser);
-        if (parsed.categories) setCategories(parsed.categories);
-        if (parsed.products) setProducts(parsed.products);
-        if (parsed.stockHistories) setStockHistories(parsed.stockHistories);
-        if (parsed.vouchers) setVouchers(parsed.vouchers);
-        if (parsed.orders) setOrders(parsed.orders);
-        if (parsed.reviews) setReviews(parsed.reviews);
-        if (parsed.addresses) setAddresses(parsed.addresses);
-        if (parsed.cart) setCart(parsed.cart);
-        if (parsed.wishlistProductIds) setWishlistProductIds(parsed.wishlistProductIds);
-      }
-    } catch {
-      // Ignore invalid localStorage
+    setUnauthorizedListener(() => {
+      clearSessionState();
+    });
+    return () => setUnauthorizedListener(null);
+  }, [clearSessionState]);
+
+  const loadCatalogPublicData = useCallback(async (userIdForLikes?: string) => {
+    const [catRes, prdRes, revRes, vchRes] = await Promise.all([
+      categoryApi.list(),
+      productApi.list({ page: 1, pageSize: 100 }),
+      reviewApi.list({ page: 1, pageSize: 100 }),
+      voucherApi.list(),
+    ]);
+
+    if (!catRes.ok && catRes.status === 0) {
+      setApiConnectionError(catRes.message);
+    } else {
+      setApiConnectionError(null);
+    }
+
+    if (catRes.ok && catRes.data) {
+      setCategories(catRes.data.map(mapDanhMucToCategory));
+    }
+
+    if (prdRes.ok && prdRes.data) {
+      const existingById = new Map(productsRef.current.map((p) => [p.id, p]));
+      setProducts(
+        prdRes.data.items.map((dto) =>
+          mapSanPhamToProduct(dto, existingById.get(String(dto.id)))
+        )
+      );
+    }
+
+    if (revRes.ok && revRes.data) {
+      setReviews(revRes.data.items.map((dto) => mapDanhGiaToReview(dto, userIdForLikes)));
+    }
+
+    if (vchRes.ok && vchRes.data) {
+      setVouchers(vchRes.data.map(mapMaGiamGiaToVoucher));
     }
   }, []);
 
-  // Save state changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          users,
-          accountLockHistories,
-          currentUser,
-          categories,
-          products,
-          stockHistories,
-          vouchers,
-          orders,
-          reviews,
-          addresses,
-          cart,
-          wishlistProductIds,
+  const hydrateOrdersWithDetails = useCallback(async () => {
+    const listRes = await orderApi.list({ page: 1, pageSize: 100 });
+    if (!listRes.ok || !listRes.data) return;
+
+    const existingById = new Map(ordersRef.current.map((o) => [o.id, o]));
+    const summaryOrders = listRes.data.items.map((dto) =>
+      mapDonHangListItemToOrder(dto, existingById.get(String(dto.id)))
+    );
+    setOrders(summaryOrders);
+
+    // Tải chi tiết song song theo nhóm nhỏ để các trang đơn hàng & kiểm tra quyền đánh giá có đủ items + timeline
+    const detailed = await Promise.all(
+      listRes.data.items.slice(0, 30).map(async (item) => {
+        const detailRes = await orderApi.getDetail(item.id);
+        return detailRes.ok && detailRes.data
+          ? mapDonHangDetailToOrder(detailRes.data)
+          : mapDonHangListItemToOrder(item, existingById.get(String(item.id)));
+      })
+    );
+
+    const detailMap = new Map(detailed.map((o) => [o.id, o]));
+    setOrders(summaryOrders.map((o) => detailMap.get(o.id) || o));
+  }, []);
+
+  const hydrateInventoryForManager = useCallback(async () => {
+    const [invRes, histRes] = await Promise.all([
+      inventoryApi.list({ page: 1, pageSize: 100 }),
+      inventoryApi.listHistory({ page: 1, pageSize: 100 }),
+    ]);
+
+    if (invRes.ok && invRes.data) {
+      const stockMap = new Map(invRes.data.items.map((tk) => [String(tk.sanPhamId), tk]));
+      setProducts((prev) =>
+        prev.map((p) => {
+          const tk = stockMap.get(p.id);
+          if (!tk) return p;
+          return {
+            ...p,
+            tonKhoId: tk.tonKhoId,
+            stock: tk.soLuongTon,
+            minStockThreshold: tk.nguongToiThieu,
+          };
         })
       );
-    } catch {
-      // Ignore quota errors
-    }
-  }, [
-    users,
-    accountLockHistories,
-    currentUser,
-    categories,
-    products,
-    stockHistories,
-    vouchers,
-    orders,
-    reviews,
-    addresses,
-    cart,
-    wishlistProductIds,
-  ]);
-
-  const switchDemoRole = (roleOrGuest: UserRole | 'GUEST') => {
-    if (roleOrGuest === 'GUEST') {
-      setCurrentUser(null);
-      return;
-    }
-    const found = users.find((u) => u.role === roleOrGuest && !u.isLocked);
-    if (found) setCurrentUser(found);
-  };
-
-  const resetDemoData = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setUsers(SEED_USERS);
-    setAccountLockHistories(SEED_ACCOUNT_LOCK_HISTORIES);
-    setCurrentUser(SEED_USERS[2]);
-    setCategories(SEED_CATEGORIES);
-    setProducts(SEED_PRODUCTS);
-    setStockHistories(SEED_STOCK_HISTORIES);
-    setVouchers(SEED_VOUCHERS);
-    setOrders(SEED_ORDERS);
-    setReviews(SEED_REVIEWS);
-    setAddresses(SEED_ADDRESSES);
-    setCart([
-      { productId: 'prd-1', quantity: 1, addedPrice: 2100000 },
-      { productId: 'prd-2', quantity: 1, addedPrice: 1450000 },
-    ]);
-    setWishlistProductIds(['prd-2', 'prd-5']);
-  };
-
-  // UC-30: Thêm vào giỏ hàng
-  const addToCart = (productId: string, quantity = 1) => {
-    if (quantity <= 0 || !Number.isInteger(quantity)) {
-      return { ok: false, message: 'Số lượng không hợp lệ.' };
-    }
-    const product = products.find((p) => p.id === productId);
-    if (!product || !product.isVisible || product.isDeleted) {
-      return { ok: false, message: 'Sản phẩm không khả dụng.' };
-    }
-    if (product.stock <= 0) {
-      return { ok: false, message: 'Sản phẩm đã hết hàng.' };
-    }
-    const existing = cart.find((c) => c.productId === productId);
-    const currentQty = existing ? existing.quantity : 0;
-    const targetQty = currentQty + quantity;
-
-    if (targetQty > product.stock) {
-      setCart((prev) => {
-        const others = prev.filter((c) => c.productId !== productId);
-        return [...others, { productId, quantity: product.stock, addedPrice: product.price }];
-      });
-      return {
-        ok: true,
-        message: `Số lượng vượt tồn kho. Đã điều chỉnh về tối đa (${product.stock}).`,
-      };
     }
 
-    setCart((prev) => {
-      const others = prev.filter((c) => c.productId !== productId);
-      return [...others, { productId, quantity: targetQty, addedPrice: product.price }];
+    if (histRes.ok && histRes.data) {
+      setStockHistories(histRes.data.items.map(mapBienDongKhoToStockHistory));
+    }
+  }, []);
+
+  const hydrateRoleData = useCallback(
+    async (user: User) => {
+      if (user.role === 'KhachHang') {
+        const [addrRes, cartRes, wishRes] = await Promise.all([
+          addressApi.list(),
+          cartApi.getCart(),
+          cartApi.listWishlist(),
+        ]);
+
+        if (addrRes.ok && addrRes.data) {
+          setAddresses(addrRes.data.map((a) => mapDiaChiToShippingAddress(a, user.id)));
+        }
+        if (cartRes.ok && cartRes.data) {
+          setCart(cartRes.data.items.map(mapGioHangItemToCartItem));
+        }
+        if (wishRes.ok && wishRes.data) {
+          setWishlistProductIds(wishRes.data.map((w) => String(w.sanPhamId)));
+        }
+        await hydrateOrdersWithDetails();
+      } else if (user.role === 'NhanVien') {
+        await hydrateOrdersWithDetails();
+      } else if (user.role === 'QuanLy') {
+        const [accRes] = await Promise.all([
+          accountApi.listAccounts({ page: 1, pageSize: 100 }),
+          hydrateInventoryForManager(),
+          hydrateOrdersWithDetails(),
+        ]);
+        if (accRes.ok && accRes.data) {
+          setUsers(accRes.data.items.map(mapTaiKhoanItemToUser));
+        }
+      }
+    },
+    [hydrateInventoryForManager, hydrateOrdersWithDetails]
+  );
+
+  const refreshAllData = useCallback(async () => {
+    const token = getAccessToken();
+    let activeUser: User | null = null;
+
+    if (token) {
+      const profileRes = await accountApi.getProfile();
+      if (profileRes.ok && profileRes.data) {
+        activeUser = mapHoSoToUser(profileRes.data);
+        setCurrentUser(activeUser);
+      } else if (profileRes.status === 401) {
+        clearSessionState();
+      }
+    }
+
+    await loadCatalogPublicData(activeUser?.id);
+    if (activeUser) {
+      await hydrateRoleData(activeUser);
+    }
+  }, [clearSessionState, hydrateRoleData, loadCatalogPublicData]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        await refreshAllData();
+      } finally {
+        if (active) setIsBootstrapping(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [refreshAllData]);
+
+  // ============================================================================
+  // On-demand detail loaders
+  // ============================================================================
+  const loadProductDetail = useCallback(async (productId: string): Promise<Product | null> => {
+    const numId = Number(productId);
+    if (!Number.isFinite(numId) || numId <= 0) return null;
+
+    const res = await productApi.getDetail(numId);
+    if (!res.ok || !res.data) return null;
+
+    const existing = productsRef.current.find((p) => p.id === productId);
+    const mapped = mapSanPhamToProduct(res.data, existing);
+    setProducts((prev) => {
+      const exists = prev.some((p) => p.id === mapped.id);
+      return exists ? prev.map((p) => (p.id === mapped.id ? mapped : p)) : [...prev, mapped];
     });
-    return { ok: true, message: `Đã thêm ${quantity} x ${product.name} vào giỏ.` };
+    return mapped;
+  }, []);
+
+  const loadOrderDetail = useCallback(async (orderId: string): Promise<Order | null> => {
+    const numId = Number(orderId);
+    if (!Number.isFinite(numId) || numId <= 0) return null;
+
+    const res = await orderApi.getDetail(numId);
+    if (!res.ok || !res.data) return null;
+
+    const mapped = mapDonHangDetailToOrder(res.data);
+    setOrders((prev) => {
+      const exists = prev.some((o) => o.id === mapped.id);
+      return exists ? prev.map((o) => (o.id === mapped.id ? mapped : o)) : [mapped, ...prev];
+    });
+    return mapped;
+  }, []);
+
+  const loadAccountLockHistory = useCallback(
+    async (userId: string): Promise<AccountLockHistory[]> => {
+      const numId = Number(userId);
+      if (!Number.isFinite(numId) || numId <= 0) return [];
+
+      const res = await accountApi.getLockHistory(numId);
+      if (!res.ok || !res.data) return [];
+
+      const mapped = res.data.map(mapLichSuKhoaToModel);
+      setAccountLockHistories((prev) => {
+        const others = prev.filter((h) => h.userId !== userId);
+        return [...mapped, ...others];
+      });
+      return mapped;
+    },
+    []
+  );
+
+  // ============================================================================
+  // Cart & Wishlist (UC-29..33)
+  // ============================================================================
+  const addToCart = async (productId: string, quantity = 1): Promise<ActionResult> => {
+    if (!currentUser) {
+      return { ok: false, message: 'Vui lòng đăng nhập bằng tài khoản Khách hàng để thêm vào giỏ hàng.' };
+    }
+    if (currentUser.role !== 'KhachHang') {
+      return { ok: false, message: 'Chỉ tài khoản Khách hàng mới có thể mua sắm và sử dụng giỏ hàng.' };
+    }
+    const res = await cartApi.addItem(Number(productId), quantity);
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      setCart(res.data.items.map(mapGioHangItemToCartItem));
+    }
+    return { ok: true, message: res.message };
   };
 
-  // UC-31: Chỉnh sửa số lượng trong giỏ hàng
-  const updateCartQuantity = (productId: string, newQuantity: number) => {
-    if (Number.isNaN(newQuantity) || !Number.isInteger(newQuantity) || newQuantity < 0) {
-      return { ok: false, message: 'Số lượng không hợp lệ.' };
+  const updateCartQuantity = async (
+    productId: string,
+    newQuantity: number
+  ): Promise<{ ok: boolean; confirmRemove?: boolean; message: string }> => {
+    if (!currentUser || currentUser.role !== 'KhachHang') {
+      return { ok: false, message: 'Vui lòng đăng nhập bằng tài khoản Khách hàng.' };
     }
-    if (newQuantity === 0) {
+    if (newQuantity <= 0) {
       return {
         ok: false,
         confirmRemove: true,
-        message: 'Số lượng bằng 0 — vui lòng xác nhận xóa sản phẩm khỏi giỏ.',
+        message: 'Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?',
       };
     }
-    const product = products.find((p) => p.id === productId);
-    if (!product || !product.isVisible || product.isDeleted || product.stock <= 0) {
-      return { ok: false, message: 'Sản phẩm hiện không còn khả dụng.' };
+    const res = await cartApi.updateQuantity(Number(productId), newQuantity);
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      setCart(res.data.items.map(mapGioHangItemToCartItem));
     }
-    if (newQuantity > product.stock) {
-      setCart((prev) =>
-        prev.map((item) =>
-          item.productId === productId ? { ...item, quantity: product.stock } : item
-        )
-      );
+    return { ok: true, message: res.message };
+  };
+
+  const removeFromCart = async (productId: string): Promise<ActionResult> => {
+    if (!currentUser || currentUser.role !== 'KhachHang') {
+      return { ok: false, message: 'Vui lòng đăng nhập bằng tài khoản Khách hàng.' };
+    }
+    const res = await cartApi.removeItem(Number(productId));
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      setCart(res.data.items.map(mapGioHangItemToCartItem));
+    }
+    return { ok: true, message: res.message };
+  };
+
+  const toggleWishlist = async (
+    productId: string
+  ): Promise<{ added: boolean; message: string }> => {
+    if (!currentUser || currentUser.role !== 'KhachHang') {
       return {
-        ok: true,
-        message: `Số lượng vượt tồn kho. Đã đặt về mức tối đa còn lại (${product.stock}).`,
+        added: false,
+        message: 'Vui lòng đăng nhập bằng tài khoản Khách hàng để lưu sản phẩm yêu thích.',
       };
     }
-    setCart((prev) =>
-      prev.map((item) =>
-        item.productId === productId ? { ...item, quantity: newQuantity } : item
-      )
-    );
-    return { ok: true, message: 'Đã cập nhật số lượng.' };
-  };
 
-  // UC-32: Xóa sản phẩm khỏi giỏ hàng
-  const removeFromCart = (productId: string) => {
-    const exists = cart.some((c) => c.productId === productId);
-    if (!exists) {
-      return { ok: false, message: 'Sản phẩm không còn trong giỏ hàng.' };
-    }
-    setCart((prev) => prev.filter((c) => c.productId !== productId));
-    return { ok: true, message: 'Đã xóa sản phẩm khỏi giỏ hàng.' };
-  };
-
-  // UC-33: Yêu thích
-  const toggleWishlist = (productId: string) => {
     const exists = wishlistProductIds.includes(productId);
-    if (exists) {
-      setWishlistProductIds((prev) => prev.filter((id) => id !== productId));
-      return { added: false, message: 'Đã bỏ lưu sản phẩm.' };
-    } else {
-      setWishlistProductIds((prev) => [...prev, productId]);
-      return { added: true, message: 'Đã lưu sản phẩm vào yêu thích.' };
+    const res = exists
+      ? await cartApi.removeWishlist(Number(productId))
+      : await cartApi.addWishlist(Number(productId));
+
+    if (!res.ok) {
+      return { added: exists, message: res.message };
     }
+
+    setWishlistProductIds((prev) =>
+      exists ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+    return { added: !exists, message: res.message };
   };
 
-  // UC-07 & UC-34 3a: Thêm địa chỉ nhận hàng mới
-  const addShippingAddress = (input: Omit<ShippingAddress, 'id' | 'userId'>) => {
-    if (!currentUser) {
-      return { ok: false, message: 'Vui lòng đăng nhập.' };
-    }
-    if (
-      !input.recipientName.trim() ||
-      !input.phone.trim() ||
-      !input.province.trim() ||
-      !input.district.trim() ||
-      !input.ward.trim() ||
-      !input.detailAddress.trim()
-    ) {
-      return { ok: false, message: 'Vui lòng điền đầy đủ thông tin địa chỉ bắt buộc.' };
-    }
+  // ============================================================================
+  // Addresses, Vouchers & Checkout (UC-07, UC-34..37, UC-40..41)
+  // ============================================================================
+  const addShippingAddress = async (
+    input: Omit<ShippingAddress, 'id' | 'userId'>
+  ): Promise<{ ok: boolean; address?: ShippingAddress; message: string }> => {
+    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập để thêm địa chỉ.' };
 
-    const userAddresses = addresses.filter((a) => a.userId === currentUser.id);
-    if (userAddresses.length >= 10) {
-      return { ok: false, message: 'Đã đạt giới hạn số địa chỉ tối đa (10 địa chỉ).' };
-    }
-
-    const shouldBeDefault = input.isDefault || userAddresses.length === 0;
-    const newAddr: ShippingAddress = {
-      ...input,
-      id: `addr-${Date.now()}`,
-      userId: currentUser.id,
-      isDefault: shouldBeDefault,
-    };
-
-    setAddresses((prev) => {
-      const updated = shouldBeDefault
-        ? prev.map((a) => (a.userId === currentUser.id ? { ...a, isDefault: false } : a))
-        : prev;
-      return [...updated, newAddr];
+    const res = await addressApi.create({
+      tenNguoiNhan: input.recipientName.trim(),
+      soDienThoai: input.phone.trim(),
+      tinhThanh: input.province.trim(),
+      quanHuyen: input.district.trim(),
+      phuongXa: input.ward.trim(),
+      diaChiCuThe: input.detailAddress.trim(),
+      macDinh: input.isDefault,
     });
 
-    return { ok: true, address: newAddr, message: 'Đã thêm địa chỉ nhận hàng mới.' };
+    if (!res.ok || !res.data) {
+      return { ok: false, message: res.message };
+    }
+
+    const mapped = mapDiaChiToShippingAddress(res.data, currentUser.id);
+    const listRes = await addressApi.list();
+    if (listRes.ok && listRes.data) {
+      setAddresses(listRes.data.map((a) => mapDiaChiToShippingAddress(a, currentUser.id)));
+    } else {
+      setAddresses((prev) => [...prev, mapped]);
+    }
+    return { ok: true, address: mapped, message: res.message };
   };
 
-  // UC-35: Thẩm định 5 điều kiện Mã giảm giá
-  const validateVoucherCode = (code: string, subtotal: number): VoucherValidationResult => {
+  const updateShippingAddress = async (
+    id: string,
+    input: Omit<ShippingAddress, 'id' | 'userId'>
+  ): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
+
+    const res = await addressApi.update(Number(id), {
+      tenNguoiNhan: input.recipientName.trim(),
+      soDienThoai: input.phone.trim(),
+      tinhThanh: input.province.trim(),
+      quanHuyen: input.district.trim(),
+      phuongXa: input.ward.trim(),
+      diaChiCuThe: input.detailAddress.trim(),
+      macDinh: input.isDefault,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+
+    const listRes = await addressApi.list();
+    if (listRes.ok && listRes.data) {
+      setAddresses(listRes.data.map((a) => mapDiaChiToShippingAddress(a, currentUser.id)));
+    }
+    return { ok: true, message: res.message };
+  };
+
+  const deleteShippingAddress = async (id: string): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
+
+    const res = await addressApi.remove(Number(id));
+    if (!res.ok) return { ok: false, message: res.message };
+
+    const listRes = await addressApi.list();
+    if (listRes.ok && listRes.data) {
+      setAddresses(listRes.data.map((a) => mapDiaChiToShippingAddress(a, currentUser.id)));
+    } else {
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+    }
+    return { ok: true, message: res.message };
+  };
+
+  const setDefaultShippingAddress = async (id: string): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
+
+    const res = await addressApi.setDefault(Number(id));
+    if (!res.ok) return { ok: false, message: res.message };
+
+    setAddresses((prev) => prev.map((a) => ({ ...a, isDefault: a.id === id })));
+    return { ok: true, message: res.message };
+  };
+
+  const validateVoucherCode = async (
+    code: string,
+    _subtotal: number
+  ): Promise<VoucherValidationResult> => {
     const normalized = code.trim().toUpperCase();
     if (!normalized) {
       return { ok: false, discountAmount: 0, message: 'Vui lòng nhập mã giảm giá.' };
     }
 
-    const voucher = vouchers.find(
-      (v) => !v.isDeleted && v.code.toUpperCase() === normalized
+    const res = await checkoutApi.applyVoucher(normalized);
+    if (!res.ok || !res.data) {
+      return { ok: false, discountAmount: 0, message: res.message };
+    }
+
+    const matched = vouchers.find(
+      (v) => v.id === String(res.data!.maGiamGiaId) || v.code.toUpperCase() === res.data!.ma.toUpperCase()
     );
-    // 1. Mã tồn tại & đang bật (2a)
-    if (!voucher || !voucher.isActive || voucher.isDeleted) {
-      return { ok: false, discountAmount: 0, message: 'Mã giảm giá không hợp lệ hoặc đã ngừng áp dụng.' };
-    }
-
-    // 2. Thời hạn hiệu lực (2b)
-    const now = Date.now();
-    const start = new Date(voucher.startDate).getTime();
-    const end = new Date(voucher.endDate).getTime();
-    if (now < start) {
-      return { ok: false, discountAmount: 0, message: 'Mã giảm giá chưa đến thời gian áp dụng.' };
-    }
-    if (now > end) {
-      return { ok: false, discountAmount: 0, message: 'Mã giảm giá đã hết hạn sử dụng.' };
-    }
-
-    // 3. Số lượt còn lại (2c)
-    if (voucher.usedCount >= voucher.usageLimit) {
-      return { ok: false, discountAmount: 0, message: 'Mã giảm giá đã hết lượt sử dụng.' };
-    }
-
-    // 4. Giá trị đơn tối thiểu (2d)
-    if (subtotal < voucher.minOrderValue) {
-      return {
-        ok: false,
-        discountAmount: 0,
-        message: `Đơn hàng chưa đạt giá trị tối thiểu ${formatVND(voucher.minOrderValue)}.`,
-      };
-    }
-
-    // 5. Tính mức giảm (Phần trăm có trần tối đa hoặc cố định)
-    let discountAmount = 0;
-    if (voucher.discountType === 'PhanTram') {
-      discountAmount = Math.round((subtotal * voucher.discountValue) / 100);
-      if (voucher.maxDiscountAmount && discountAmount > voucher.maxDiscountAmount) {
-        discountAmount = voucher.maxDiscountAmount;
-      }
-    } else {
-      discountAmount = voucher.discountValue;
-    }
-
-    discountAmount = Math.min(discountAmount, subtotal);
 
     return {
       ok: true,
-      voucher,
-      discountAmount,
-      message: `Áp dụng mã ${voucher.code} thành công (-${formatVND(discountAmount)}).`,
+      voucher: matched,
+      discountAmount: Number(res.data.tienGiam) || 0,
+      message: res.message,
     };
   };
 
-  // UC-37 & UC-40: Đặt hàng nguyên tử (Atomic Checkout)
-  const placeOrder = ({
-    addressId,
-    paymentMethod,
-    voucherCode,
-  }: {
+  const placeOrder = async (params: {
     addressId: string;
     paymentMethod: PaymentMethod;
     voucherCode?: string;
-  }) => {
-    if (!currentUser) {
-      return { ok: false, message: 'Vui lòng đăng nhập trước khi đặt hàng.' };
+  }): Promise<{ ok: boolean; order?: Order; message: string }> => {
+    if (!currentUser || currentUser.role !== 'KhachHang') {
+      return { ok: false, message: 'Vui lòng đăng nhập bằng tài khoản Khách hàng để đặt hàng.' };
     }
 
-    const selectedAddress = addresses.find(
-      (a) => a.id === addressId && a.userId === currentUser.id
-    );
-    if (!selectedAddress) {
-      return { ok: false, message: 'Vui lòng chọn địa chỉ nhận hàng.' };
-    }
-    if (!isAddressInDeliveryZone(selectedAddress.province, selectedAddress.district)) {
-      return {
-        ok: false,
-        message: 'Địa chỉ nằm ngoài khu vực giao hàng hỗ trợ. Vui lòng chọn địa chỉ khác.',
-      };
-    }
-
-    // Lọc các sản phẩm khả dụng trong giỏ
-    const validCartItems = cart.filter((item) => {
-      const p = products.find((prod) => prod.id === item.productId);
-      return p && p.isVisible && !p.isDeleted && p.stock > 0;
+    const res = await checkoutApi.confirmOrder({
+      diaChiId: Number(params.addressId),
+      maGiamGia: params.voucherCode?.trim() || null,
+      phuongThucThanhToan: params.paymentMethod,
     });
 
-    if (validCartItems.length === 0) {
-      return { ok: false, message: 'Giỏ hàng không có sản phẩm khả dụng để đặt.' };
+    if (!res.ok || !res.data) {
+      return { ok: false, message: res.message };
     }
 
-    // Kiểm tra tồn kho nguyên tử (UC-37 2a)
-    for (const item of validCartItems) {
-      const p = products.find((prod) => prod.id === item.productId);
-      if (!p || p.stock < item.quantity) {
-        return {
-          ok: false,
-          message: `Sản phẩm "${p?.name || item.productId}" không đủ tồn kho (chỉ còn ${
-            p?.stock || 0
-          }). Giao dịch đã được Rollback.`,
-        };
-      }
-    }
-
-    const subtotal = validCartItems.reduce((sum, item) => {
-      const p = products.find((prod) => prod.id === item.productId)!;
-      return sum + p.price * item.quantity;
-    }, 0);
-
-    // Kiểm tra giới hạn COD (UC-36 1a)
-    if (paymentMethod === 'KhiNhanHang' && subtotal > 20000000) {
-      return {
-        ok: false,
-        message: 'Thanh toán khi nhận hàng (COD) chỉ áp dụng cho đơn từ 20.000.000đ trở xuống.',
-      };
-    }
-
-    // Kiểm tra lại mã giảm giá (UC-37 2c)
-    let discountAmount = 0;
-    let appliedVoucher: Voucher | undefined;
-    if (voucherCode) {
-      const vRes = validateVoucherCode(voucherCode, subtotal);
-      if (!vRes.ok) {
-        return { ok: false, message: `Mã giảm giá không còn hợp lệ: ${vRes.message}` };
-      }
-      discountAmount = vRes.discountAmount;
-      appliedVoucher = vRes.voucher;
-    }
-
-    const totalAmount = Math.max(0, subtotal - discountAmount);
-    const nowIso = new Date().toISOString();
-    const orderCode = `ORD-${Math.floor(100 + Math.random() * 900)}`;
-
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      code: orderCode,
-      userId: currentUser.id,
-      customerName: currentUser.fullName,
-      status: 'ChoXacNhan',
-      items: validCartItems.map((item) => {
-        const p = products.find((prod) => prod.id === item.productId)!;
-        return {
-          productId: p.id,
-          productName: p.name,
-          productImage: p.imageUrl,
-          quantity: item.quantity,
-          priceAtOrder: p.price,
-        };
-      }),
-      shippingAddress: selectedAddress,
-      paymentMethod,
-      voucherId: appliedVoucher?.id,
-      voucherCode: appliedVoucher?.code,
-      discountAmount,
-      subtotal,
-      totalAmount,
-      isPaid: paymentMethod !== 'KhiNhanHang',
-      timeline: [
-        {
-          status: 'ChoXacNhan',
-          timestamp: nowIso,
-          note: 'Khách hàng đặt đơn thành công — Chờ xác nhận',
-          actorName: currentUser.fullName,
-        },
-      ],
-      createdAt: nowIso,
-    };
-
-    // 1. Trừ tồn kho & Tạo lịch sử biến động kho (StockHistories)
-    const newHistories: StockHistory[] = [];
-    setProducts((prev) =>
-      prev.map((p) => {
-        const ordered = validCartItems.find((c) => c.productId === p.id);
-        if (!ordered) return p;
-        const nextStock = p.stock - ordered.quantity;
-        newHistories.push({
-          id: `sh-${Date.now()}-${p.id}`,
-          productId: p.id,
-          orderId: newOrder.id,
-          orderCode,
-          type: 'XuatBan',
-          quantityChange: -ordered.quantity,
-          stockBefore: p.stock,
-          stockAfter: nextStock,
-          reasonOrNote: `Xuất bán theo đơn hàng #${orderCode}`,
-          actorName: 'Hệ thống (Atomic Checkout)',
-          createdAt: nowIso,
-        });
-        return {
-          ...p,
-          stock: nextStock,
-          lastSoldAt: nowIso,
-        };
-      })
-    );
-
-    setStockHistories((prev) => [...newHistories, ...prev]);
-
-    // 2. Trừ lượt mã giảm giá (nếu có)
-    if (appliedVoucher) {
-      setVouchers((prev) =>
-        prev.map((v) =>
-          v.id === appliedVoucher.id ? { ...v, usedCount: v.usedCount + 1 } : v
-        )
-      );
-    }
-
-    // 3. Lưu đơn hàng & Làm trống các sản phẩm đã đặt khỏi giỏ
-    setOrders((prev) => [newOrder, ...prev]);
-    const orderedIds = new Set(validCartItems.map((i) => i.productId));
-    setCart((prev) => prev.filter((i) => !orderedIds.has(i.productId)));
+    const createdOrder = await loadOrderDetail(String(res.data.donHangId));
+    setCart([]);
+    await loadCatalogPublicData(currentUser.id);
+    await hydrateOrdersWithDetails();
 
     return {
       ok: true,
-      order: newOrder,
-      message: `Đặt hàng thành công! Mã đơn hàng: #${orderCode}`,
+      order: createdOrder || undefined,
+      message: res.message,
     };
   };
 
-  // UC-53 & UC-54: Đánh giá sản phẩm (UQ_DanhGia_DonHang_SanPham: 1 đánh giá / (DonHang, SanPham))
-  const BANNED_REVIEW_PATTERNS = [
-    /\b(lừa đảo|lua dao|đồ rác|do rac|vô học|vo hoc|đm|dm|vcl|cc|cứt|cut)\b/i,
-    /(https?:\/\/|www\.)\S+/i,
-  ];
+  const cancelCustomerOrder = async (
+    orderId: string,
+    cancelReason: string
+  ): Promise<ActionResult> => {
+    const res = await orderApi.cancel(Number(orderId), cancelReason.trim());
+    if (!res.ok) return { ok: false, message: res.message };
 
-  const submitReview = (
-    productId: string,
-    rating: number,
-    comment: string,
-    images?: string[],
-    orderId?: string
-  ) => {
-    if (!currentUser) {
-      return { ok: false, message: 'Vui lòng đăng nhập để đánh giá sản phẩm.' };
-    }
-    if (rating < 1 || rating > 5) {
-      return { ok: false, message: 'Vui lòng chọn số sao từ 1 đến 5.' };
-    }
-    const trimmed = comment.trim();
-    if (!trimmed) {
-      return { ok: false, message: 'Vui lòng nhập nội dung nhận xét.' };
-    }
-    if (trimmed.length > 2000) {
-      return { ok: false, message: 'Nội dung nhận xét không vượt quá 2000 ký tự.' };
-    }
-    // UC-53 4b: Kiểm duyệt từ ngữ cấm / liên kết quảng cáo spam
-    if (BANNED_REVIEW_PATTERNS.some((rx) => rx.test(trimmed))) {
-      return {
-        ok: false,
-        message:
-          'Nội dung đánh giá chứa từ ngữ không phù hợp hoặc đường dẫn spam. Vui lòng chỉnh sửa lại.',
-      };
+    await loadOrderDetail(orderId);
+    await loadCatalogPublicData(currentUser?.id);
+    return { ok: true, message: res.message };
+  };
+
+  // ============================================================================
+  // Auth & Profile (UC-01..06)
+  // ============================================================================
+  const loginUser = async (
+    identifier: string,
+    password: string
+  ): Promise<{ ok: boolean; user?: User; message: string }> => {
+    const res = await authApi.login({
+      taiKhoan: identifier.trim(),
+      matKhau: password,
+    });
+    if (!res.ok || !res.data) {
+      return { ok: false, message: res.message };
     }
 
-    const cleanImages = images && images.length > 0 ? images : undefined;
+    setAccessToken(res.data.accessToken, res.data.expiresAt);
 
-    // Tất cả đơn hàng đã hoàn thành có chứa sản phẩm này của khách hàng
-    const completedOrders = orders.filter(
-      (o) =>
-        o.userId === currentUser.id &&
-        o.status === 'HoanThanh' &&
-        o.items.some((item) => item.productId === productId)
-    );
-
-    // Xác định cặp (orderId, productId) đích theo UQ_DanhGia_DonHang_SanPham
-    let targetOrderId = orderId;
-    if (targetOrderId) {
-      const validOrder = completedOrders.find((o) => o.id === targetOrderId);
-      if (!validOrder) {
-        return {
-          ok: false,
-          message:
-            'Chỉ đơn hàng đã hoàn thành có chứa sản phẩm này mới được phép gửi đánh giá.',
-        };
-      }
-    } else {
-      // Nếu không truyền orderId cụ thể: ưu tiên đơn hoàn thành chưa đánh giá; nếu tất cả đã đánh giá thì sửa đơn gần nhất
-      const unreviewedOrder = completedOrders.find(
-        (o) =>
-          !reviews.some(
-            (r) =>
-              r.orderId === o.id &&
-              r.productId === productId &&
-              r.userId === currentUser.id
-          )
-      );
-      targetOrderId = unreviewedOrder?.id || completedOrders[0]?.id;
-    }
-
-    const existing = targetOrderId
-      ? reviews.find(
-          (r) =>
-            r.orderId === targetOrderId &&
-            r.productId === productId &&
-            r.userId === currentUser.id
-        )
-      : reviews.find((r) => r.productId === productId && r.userId === currentUser.id);
-
-    if (existing) {
-      setReviews((prev) =>
-        prev.map((r) =>
-          r.id === existing.id
-            ? {
-                ...r,
-                rating,
-                comment: trimmed,
-                images: images !== undefined ? cleanImages : r.images,
-                isEdited: true,
-              }
-            : r
-        )
-      );
-      return { ok: true, message: 'Đã cập nhật đánh giá của bạn.' };
-    }
-
-    if (!targetOrderId) {
-      return {
-        ok: false,
-        message: 'Chỉ khách hàng đã mua và hoàn thành đơn hàng mới có thể đánh giá sản phẩm này.',
-      };
-    }
-
-    const newReview: Review = {
-      id: `rev-${Date.now()}`,
-      productId,
-      orderId: targetOrderId,
-      userId: currentUser.id,
-      userName: currentUser.fullName,
-      userAvatar: currentUser.avatar,
-      rating,
-      comment: trimmed,
-      images: cleanImages,
-      isEdited: false,
-      likedByUserIds: [],
+    let loggedInUser: User = {
+      id: String(res.data.taiKhoanId),
+      code: `${res.data.vaiTro === 'QuanLy' ? 'QL' : res.data.vaiTro === 'NhanVien' ? 'NV' : 'KH'}${String(res.data.taiKhoanId).padStart(4, '0')}`,
+      fullName: res.data.hoTen,
+      email: res.data.email,
+      phone: '',
+      passwordHash: '',
+      role: res.data.vaiTro,
+      isLocked: false,
+      failedLoginAttempts: 0,
       createdAt: new Date().toISOString(),
     };
 
-    setReviews((prev) => [newReview, ...prev]);
-    return { ok: true, message: 'Cảm ơn bạn đã gửi đánh giá sản phẩm!' };
+    const profileRes = await accountApi.getProfile();
+    if (profileRes.ok && profileRes.data) {
+      loggedInUser = mapHoSoToUser(profileRes.data);
+    }
+
+    setCurrentUser(loggedInUser);
+    await loadCatalogPublicData(loggedInUser.id);
+    await hydrateRoleData(loggedInUser);
+
+    return { ok: true, user: loggedInUser, message: res.message };
   };
 
-  const deleteReview = (reviewId: string) => {
-    if (!currentUser) {
-      return { ok: false, message: 'Vui lòng đăng nhập.' };
-    }
-    const target = reviews.find((r) => r.id === reviewId);
-    if (!target) {
-      return { ok: false, message: 'Đánh giá không còn tồn tại.' };
-    }
-    if (currentUser.role !== 'QuanLy' && target.userId !== currentUser.id) {
-      return { ok: false, message: 'Bạn chỉ có thể xóa đánh giá của chính mình.' };
-    }
-    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
-    return { ok: true, message: 'Đã xóa đánh giá.' };
-  };
-
-  const toggleReviewLike = (reviewId: string) => {
-    if (!currentUser) {
-      return { ok: false, message: 'Vui lòng đăng nhập để thích đánh giá.' };
-    }
-    const target = reviews.find((r) => r.id === reviewId);
-    if (!target) {
-      return { ok: false, message: 'Đánh giá không tồn tại.' };
-    }
-    if (target.userId === currentUser.id) {
-      return { ok: false, message: 'Bạn không thể tự thích đánh giá của chính mình.' };
-    }
-
-    const alreadyLiked = target.likedByUserIds.includes(currentUser.id);
-    setReviews((prev) =>
-      prev.map((r) => {
-        if (r.id !== reviewId) return r;
-        const nextLikes = alreadyLiked
-          ? r.likedByUserIds.filter((id) => id !== currentUser.id)
-          : [...r.likedByUserIds, currentUser.id];
-        return { ...r, likedByUserIds: nextLikes };
-      })
-    );
-
-    return {
-      ok: true,
-      message: alreadyLiked ? 'Đã bỏ thích đánh giá.' : 'Đã đánh dấu đánh giá là hữu ích.',
-    };
-  };
-
-  // UC-07: Cập nhật / Xóa / Đặt mặc định địa chỉ nhận hàng
-  const updateShippingAddress = (
-    id: string,
-    input: Omit<ShippingAddress, 'id' | 'userId'>
-  ) => {
-    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
-    if (
-      !input.recipientName.trim() ||
-      !input.phone.trim() ||
-      !input.province.trim() ||
-      !input.district.trim() ||
-      !input.ward.trim() ||
-      !input.detailAddress.trim()
-    ) {
-      return { ok: false, message: 'Vui lòng điền đầy đủ thông tin địa chỉ bắt buộc.' };
-    }
-
-    setAddresses((prev) =>
-      prev.map((a) => {
-        if (a.userId !== currentUser.id) return a;
-        if (a.id === id) {
-          return { ...a, ...input, id, userId: currentUser.id };
-        }
-        return input.isDefault ? { ...a, isDefault: false } : a;
-      })
-    );
-
-    return { ok: true, message: 'Đã cập nhật địa chỉ nhận hàng.' };
-  };
-
-  const deleteShippingAddress = (id: string) => {
-    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
-    const target = addresses.find((a) => a.id === id && a.userId === currentUser.id);
-    if (!target) return { ok: false, message: 'Địa chỉ không tồn tại.' };
-
-    setAddresses((prev) => {
-      const remaining = prev.filter((a) => a.id !== id);
-      if (target.isDefault) {
-        const firstUserAddrIdx = remaining.findIndex((a) => a.userId === currentUser.id);
-        if (firstUserAddrIdx !== -1) {
-          remaining[firstUserAddrIdx] = {
-            ...remaining[firstUserAddrIdx],
-            isDefault: true,
-          };
-        }
-      }
-      return [...remaining];
-    });
-
-    return { ok: true, message: 'Đã xóa địa chỉ khỏi sổ địa chỉ.' };
-  };
-
-  const setDefaultShippingAddress = (id: string) => {
-    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
-    setAddresses((prev) =>
-      prev.map((a) =>
-        a.userId === currentUser.id ? { ...a, isDefault: a.id === id } : a
-      )
-    );
-    return { ok: true, message: 'Đã đặt làm địa chỉ nhận hàng mặc định.' };
-  };
-
-  // UC-41: Khách hàng hủy đơn hàng (Atomic Rollback: hoàn tồn kho + StockHistory + hoàn lượt Voucher)
-  const cancelCustomerOrder = (orderId: string, cancelReason: string) => {
-    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
-    const order = orders.find((o) => o.id === orderId && o.userId === currentUser.id);
-    if (!order) return { ok: false, message: 'Không tìm thấy đơn hàng.' };
-
-    if (order.status !== 'ChoXacNhan' && order.status !== 'DaXacNhan') {
-      return {
-        ok: false,
-        message:
-          'Chỉ có thể hủy đơn hàng khi đang ở trạng thái "Chờ xác nhận" hoặc "Đã xác nhận".',
-      };
-    }
-
-    const reason = cancelReason.trim();
-    if (!reason) {
-      return { ok: false, message: 'Vui lòng chọn hoặc nhập lý do hủy đơn hàng.' };
-    }
-
-    const nowIso = new Date().toISOString();
-
-    // 1. Hoàn lại tồn kho & Ghi lịch sử kho HoanDon
-    const restoreLogs: StockHistory[] = [];
-    setProducts((prev) =>
-      prev.map((p) => {
-        const item = order.items.find((i) => i.productId === p.id);
-        if (!item) return p;
-        const nextStock = p.stock + item.quantity;
-        restoreLogs.push({
-          id: `sh-cancel-${Date.now()}-${p.id}`,
-          productId: p.id,
-          orderId: order.id,
-          orderCode: order.code,
-          type: 'HoanDon',
-          quantityChange: item.quantity,
-          stockBefore: p.stock,
-          stockAfter: nextStock,
-          reasonOrNote: `Hoàn kho do KH hủy đơn #${order.code}: ${reason}`,
-          actorName: currentUser.fullName,
-          createdAt: nowIso,
-        });
-        return { ...p, stock: nextStock };
-      })
-    );
-    setStockHistories((prev) => [...restoreLogs, ...prev]);
-
-    // 2. Hoàn lại lượt sử dụng Voucher (nếu có)
-    if (order.voucherCode) {
-      setVouchers((prev) =>
-        prev.map((v) =>
-          v.code.toUpperCase() === order.voucherCode?.toUpperCase()
-            ? { ...v, usedCount: Math.max(0, v.usedCount - 1) }
-            : v
-        )
-      );
-    }
-
-    // 3. Cập nhật trạng thái đơn sang DaHuy
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: 'DaHuy',
-              cancelReason: reason,
-              timeline: [
-                ...o.timeline,
-                {
-                  status: 'DaHuy',
-                  timestamp: nowIso,
-                  note: `Khách hàng hủy đơn — Lý do: ${reason}`,
-                  actorName: currentUser.fullName,
-                },
-              ],
-            }
-          : o
-      )
-    );
-
-    return {
-      ok: true,
-      message: `Đã hủy đơn hàng #${order.code} và hoàn trả tồn kho thành công.`,
-    };
-  };
-
-  // UC-02: Đăng nhập (chống Account Enumeration + khóa tạm thời 5 lần sai liên tiếp)
-  const GENERIC_LOGIN_ERROR = 'Email, số điện thoại hoặc mật khẩu không chính xác.';
-
-  const loginUser = (identifier: string, password: string) => {
-    const cleanId = identifier.trim().toLowerCase();
-    if (!cleanId || !password) {
-      return { ok: false, message: 'Vui lòng nhập đầy đủ Email/SĐT và mật khẩu.' };
-    }
-
-    const user = users.find(
-      (u) => u.email.toLowerCase() === cleanId || u.phone === identifier.trim()
-    );
-
-    // CRIT-01: Thông báo chung nhất quán để chống dò tài khoản (Account Enumeration)
-    if (!user) {
-      return { ok: false, message: GENERIC_LOGIN_ERROR };
-    }
-
-    // Kiểm tra khóa bởi Admin (UC-02 3b / UC-10)
-    if (user.isLocked) {
-      return {
-        ok: false,
-        message: `Tài khoản đã bị khóa bởi Quản trị viên. Lý do: ${
-          user.lockReason || 'Vi phạm chính sách hệ thống'
-        }.`,
-      };
-    }
-
-    // Kiểm tra khóa tạm thời do sai mật khẩu 5 lần (UC-02 3a)
-    if (user.lockoutUntil) {
-      const unlockTime = new Date(user.lockoutUntil);
-      if (unlockTime > new Date()) {
-        const minutesLeft = Math.max(
-          1,
-          Math.ceil((unlockTime.getTime() - Date.now()) / 60000)
-        );
-        return {
-          ok: false,
-          message: `Tài khoản đang bị tạm khóa do nhập sai mật khẩu 5 lần liên tiếp. Vui lòng thử lại sau ${minutesLeft} phút hoặc dùng Quên mật khẩu.`,
-        };
-      }
-    }
-
-    if (user.passwordHash !== password) {
-      const nextAttempts = (user.failedLoginAttempts || 0) + 1;
-      const shouldLockout = nextAttempts >= 5;
-      const lockoutIso = shouldLockout
-        ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
-        : undefined;
-
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === user.id
-            ? {
-                ...u,
-                failedLoginAttempts: nextAttempts,
-                lockoutUntil: lockoutIso,
-              }
-            : u
-        )
-      );
-
-      if (shouldLockout) {
-        return {
-          ok: false,
-          message:
-            'Nhập sai mật khẩu 5 lần liên tiếp. Tài khoản tạm khóa 15 phút để bảo vệ an toàn.',
-        };
-      }
-
-      // Không tiết lộ tài khoản tồn tại hay số lần sai khi chưa chạm ngưỡng khóa
-      return {
-        ok: false,
-        message: GENERIC_LOGIN_ERROR,
-      };
-    }
-
-    // Đăng nhập thành công -> reset bộ đếm sai
-    const updatedUser: User = {
-      ...user,
-      failedLoginAttempts: 0,
-      lockoutUntil: undefined,
-    };
-
-    setUsers((prev) => prev.map((u) => (u.id === user.id ? updatedUser : u)));
-    setCurrentUser(updatedUser);
-
-    return {
-      ok: true,
-      user: updatedUser,
-      message: `Chào mừng ${updatedUser.fullName} quay trở lại HCShop!`,
-    };
-  };
-
-  // UC-01: Đăng ký tài khoản Khách hàng mới
-  const registerUser = (input: {
+  const registerUser = async (input: {
     fullName: string;
     email: string;
     phone: string;
@@ -1155,611 +826,363 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     confirmPassword: string;
     securityQuestion: string;
     securityAnswer: string;
-  }) => {
-    const fullName = input.fullName.trim();
-    const email = input.email.trim().toLowerCase();
-    const phone = input.phone.trim();
-    const securityQuestion = input.securityQuestion.trim();
-    const securityAnswer = input.securityAnswer.trim();
+  }): Promise<{ ok: boolean; user?: User; message: string }> => {
+    const regRes = await authApi.register({
+      hoTen: input.fullName.trim(),
+      email: input.email.trim(),
+      soDienThoai: input.phone.trim(),
+      matKhau: input.password,
+      xacNhanMatKhau: input.confirmPassword,
+      cauHoiBaoMat: input.securityQuestion.trim(),
+      cauTraLoiBaoMat: input.securityAnswer.trim(),
+    });
 
-    if (!fullName || !email || !phone || !input.password) {
-      return { ok: false, message: 'Vui lòng điền đầy đủ thông tin bắt buộc.' };
+    if (!regRes.ok) {
+      return { ok: false, message: regRes.message };
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return { ok: false, message: 'Định dạng Email không hợp lệ.' };
-    }
-
-    const phoneRegex = /^0\d{9}$/;
-    if (!phoneRegex.test(phone)) {
+    // Tự động đăng nhập ngay sau khi đăng ký thành công
+    const loginRes = await loginUser(input.email.trim(), input.password);
+    if (loginRes.ok) {
       return {
-        ok: false,
-        message: 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.',
+        ok: true,
+        user: loginRes.user,
+        message: 'Đăng ký tài khoản thành công! Đang chuyển hướng...',
       };
     }
 
-    if (users.some((u) => u.email.toLowerCase() === email)) {
-      return { ok: false, message: 'Email này đã được sử dụng bởi tài khoản khác.' };
-    }
-
-    if (users.some((u) => u.phone === phone)) {
-      return {
-        ok: false,
-        message: 'Số điện thoại này đã được đăng ký trên hệ thống.',
-      };
-    }
-
-    if (input.password.length < 6) {
-      return {
-        ok: false,
-        message: 'Mật khẩu phải có tối thiểu 6 ký tự.',
-      };
-    }
-
-    if (input.password !== input.confirmPassword) {
-      return { ok: false, message: 'Mật khẩu xác nhận không khớp.' };
-    }
-
-    if (!securityQuestion || !securityAnswer) {
-      return {
-        ok: false,
-        message: 'Vui lòng chọn câu hỏi bảo mật và nhập câu trả lời bảo mật.',
-      };
-    }
-    if (securityAnswer.length < 2) {
-      return {
-        ok: false,
-        message: 'Câu trả lời bảo mật phải có tối thiểu 2 ký tự.',
-      };
-    }
-
-    const nextIndex = users.filter((u) => u.role === 'KhachHang').length + 1;
-    const newUser: User = {
-      id: `usr-cust-${Date.now()}`,
-      code: `KH${String(nextIndex).padStart(2, '0')}`,
-      fullName,
-      email,
-      phone,
-      passwordHash: input.password,
-      role: 'KhachHang',
-      isLocked: false,
-      securityQuestion,
-      securityAnswerHash: securityAnswer,
-      failedLoginAttempts: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    setUsers((prev) => [...prev, newUser]);
-    setCurrentUser(newUser);
-
-    return {
-      ok: true,
-      user: newUser,
-      message: 'Đăng ký tài khoản thành công.',
-    };
+    return { ok: true, message: regRes.message };
   };
 
-  const logoutUser = () => {
-    setCurrentUser(null);
-  };
+  const logoutUser = useCallback(() => {
+    clearSessionState();
+    void loadCatalogPublicData(undefined);
+  }, [clearSessionState, loadCatalogPublicData]);
 
-  // UC-03: Quên mật khẩu qua Câu hỏi bảo mật (CRIT-02: khóa tạm 15 phút sau 5 lần trả lời sai)
-  const lookupUserForRecovery = (identifier: string) => {
-    const clean = identifier.trim().toLowerCase();
-    if (!clean) {
-      return { ok: false, message: 'Vui lòng nhập Email hoặc Số điện thoại của bạn.' };
-    }
-    const user = users.find(
-      (u) => u.email.toLowerCase() === clean || u.phone === identifier.trim()
-    );
-    if (!user) {
+  const lookupUserForRecovery = async (
+    identifier: string
+  ): Promise<{
+    ok: boolean;
+    accountIdentifier?: string;
+    securityQuestion?: string;
+    isLockedOut?: boolean;
+    message: string;
+  }> => {
+    const res = await authApi.getSecurityQuestion(identifier.trim());
+    if (!res.ok || !res.data) {
       return {
         ok: false,
-        message: 'Không tìm thấy tài khoản khớp với thông tin đã nhập.',
-      };
-    }
-    if (user.isLocked) {
-      return {
-        ok: false,
-        message: 'Tài khoản này đã bị khóa, không thể khôi phục mật khẩu.',
-      };
-    }
-    if (user.recoveryLockoutUntil) {
-      const unlockTime = new Date(user.recoveryLockoutUntil);
-      if (unlockTime > new Date()) {
-        const minutesLeft = Math.max(
-          1,
-          Math.ceil((unlockTime.getTime() - Date.now()) / 60000)
-        );
-        return {
-          ok: false,
-          isLockedOut: true,
-          message: `Tính năng khôi phục mật khẩu đang bị tạm khóa do nhập sai câu trả lời bảo mật 5 lần liên tiếp. Vui lòng thử lại sau ${minutesLeft} phút.`,
-        };
-      }
-    }
-    if (!user.securityQuestion || !user.securityAnswerHash) {
-      return {
-        ok: false,
-        message:
-          'Tài khoản này chưa thiết lập Câu hỏi bảo mật. Vui lòng liên hệ bộ phận hỗ trợ.',
+        isLockedOut: res.status === 403 || res.status === 423 || res.status === 429,
+        message: res.message,
       };
     }
     return {
       ok: true,
-      user,
-      securityQuestion: user.securityQuestion,
-      message: 'Đã xác thực thông tin tài khoản.',
+      accountIdentifier: res.data.emailOrPhone,
+      securityQuestion: res.data.cauHoiBaoMat,
+      message: 'Đã tìm thấy tài khoản. Vui lòng trả lời câu hỏi bảo mật bên dưới.',
     };
   };
 
-  const resetPasswordBySecurityAnswer = (params: {
-    userId: string;
+  const resetPasswordBySecurityAnswer = async (params: {
+    accountIdentifier: string;
     answer: string;
     newPassword: string;
     confirmPassword: string;
-  }) => {
-    const user = users.find((u) => u.id === params.userId);
-    if (!user || !user.securityAnswerHash) {
-      return { ok: false, message: 'Yêu cầu khôi phục không hợp lệ.' };
-    }
-
-    // Kiểm tra khóa tạm thời khôi phục mật khẩu (UC-03 5a)
-    if (user.recoveryLockoutUntil) {
-      const unlockTime = new Date(user.recoveryLockoutUntil);
-      if (unlockTime > new Date()) {
-        const minutesLeft = Math.max(
-          1,
-          Math.ceil((unlockTime.getTime() - Date.now()) / 60000)
-        );
-        return {
-          ok: false,
-          isLockedOut: true,
-          message: `Bạn đã trả lời sai quá 5 lần. Chức năng khôi phục tạm khóa thêm ${minutesLeft} phút.`,
-        };
-      }
-    }
-
-    if (
-      params.answer.trim().toLowerCase() !==
-      user.securityAnswerHash.trim().toLowerCase()
-    ) {
-      const currentAttempts =
-        user.recoveryLockoutUntil && new Date(user.recoveryLockoutUntil) <= new Date()
-          ? 0
-          : user.failedRecoveryAttempts || 0;
-      const nextAttempts = currentAttempts + 1;
-      const shouldLockout = nextAttempts >= 5;
-      const lockoutIso = shouldLockout
-        ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
-        : undefined;
-
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === user.id
-            ? {
-                ...u,
-                failedRecoveryAttempts: nextAttempts,
-                recoveryLockoutUntil: lockoutIso,
-              }
-            : u
-        )
-      );
-
-      if (shouldLockout) {
-        return {
-          ok: false,
-          isLockedOut: true,
-          message:
-            'Trả lời sai câu hỏi bảo mật 5 lần liên tiếp. Chức năng khôi phục mật khẩu tạm khóa 15 phút để bảo vệ tài khoản.',
-        };
-      }
-
+  }): Promise<{ ok: boolean; isLockedOut?: boolean; message: string }> => {
+    const res = await authApi.forgotPassword({
+      taiKhoan: params.accountIdentifier.trim(),
+      cauTraLoiBaoMat: params.answer.trim(),
+      matKhauMoi: params.newPassword,
+      xacNhanMatKhauMoi: params.confirmPassword,
+    });
+    if (!res.ok) {
       return {
         ok: false,
-        message: `Câu trả lời bảo mật không chính xác (${nextAttempts}/5 lần thử). Còn ${
-          5 - nextAttempts
-        } lần trước khi tạm khóa khôi phục.`,
+        isLockedOut: res.status === 403 || res.status === 423 || res.status === 429,
+        message: res.message,
       };
     }
-    if (params.newPassword.length < 6) {
-      return { ok: false, message: 'Mật khẩu mới phải có từ 6 ký tự trở lên.' };
-    }
-    if (params.newPassword !== params.confirmPassword) {
-      return { ok: false, message: 'Xác nhận mật khẩu mới không khớp.' };
-    }
-
-    const updated: User = {
-      ...user,
-      passwordHash: params.newPassword,
-      failedLoginAttempts: 0,
-      lockoutUntil: undefined,
-      failedRecoveryAttempts: 0,
-      recoveryLockoutUntil: undefined,
-    };
-
-    setUsers((prev) => prev.map((u) => (u.id === user.id ? updated : u)));
-    setCurrentUser(updated);
-
-    return {
-      ok: true,
-      message: 'Đặt lại mật khẩu thành công.',
-    };
+    return { ok: true, message: res.message };
   };
 
-  // UC-04: Đổi mật khẩu
-  const changePassword = (params: {
+  const changePassword = async (params: {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
-  }) => {
-    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
-    if (currentUser.passwordHash !== params.currentPassword) {
-      return { ok: false, message: 'Mật khẩu hiện tại không chính xác.' };
-    }
-    if (params.newPassword.length < 6) {
-      return { ok: false, message: 'Mật khẩu mới phải có tối thiểu 6 ký tự.' };
-    }
-    if (params.newPassword === params.currentPassword) {
-      return {
-        ok: false,
-        message: 'Mật khẩu mới không được trùng với mật khẩu hiện tại.',
-      };
-    }
-    if (params.newPassword !== params.confirmPassword) {
-      return { ok: false, message: 'Mật khẩu xác nhận không khớp.' };
-    }
-
-    const updated: User = { ...currentUser, passwordHash: params.newPassword };
-    setCurrentUser(updated);
-    setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updated : u)));
-
-    return { ok: true, message: 'Đã cập nhật mật khẩu mới.' };
+  }): Promise<ActionResult> => {
+    const res = await authApi.changePassword({
+      matKhauCu: params.currentPassword,
+      matKhauMoi: params.newPassword,
+      xacNhanMatKhauMoi: params.confirmPassword,
+    });
+    return { ok: res.ok, message: res.message };
   };
 
-  // UC-05: Thiết lập / Cập nhật Câu hỏi bảo mật
-  const updateSecurityQuestion = (params: {
+  const updateSecurityQuestion = async (params: {
     currentPassword: string;
     securityQuestion: string;
     securityAnswer: string;
-  }) => {
-    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
-    if (currentUser.passwordHash !== params.currentPassword) {
-      return { ok: false, message: 'Mật khẩu xác nhận không chính xác.' };
+  }): Promise<ActionResult> => {
+    const res = await authApi.updateSecurityQuestion({
+      cauHoiBaoMat: params.securityQuestion.trim(),
+      cauTraLoiBaoMat: params.securityAnswer.trim(),
+      matKhauHienTai: params.currentPassword,
+    });
+    if (res.ok) {
+      setCurrentUser((prev) =>
+        prev ? { ...prev, securityQuestion: params.securityQuestion.trim() } : prev
+      );
     }
-    if (!params.securityQuestion.trim() || !params.securityAnswer.trim()) {
-      return { ok: false, message: 'Vui lòng nhập đầy đủ câu hỏi và câu trả lời bảo mật.' };
-    }
-    if (params.securityAnswer.trim().length < 2) {
-      return { ok: false, message: 'Câu trả lời bảo mật phải có tối thiểu 2 ký tự.' };
-    }
-
-    const updated: User = {
-      ...currentUser,
-      securityQuestion: params.securityQuestion.trim(),
-      securityAnswerHash: params.securityAnswer.trim(),
-    };
-    setCurrentUser(updated);
-    setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updated : u)));
-
-    return { ok: true, message: 'Đã lưu thiết lập câu hỏi bảo mật.' };
+    return { ok: res.ok, message: res.message };
   };
 
-  // UC-06: Cập nhật thông tin cá nhân
-  const updateProfile = (params: {
+  const updateProfile = async (params: {
     fullName: string;
     phone: string;
     dob?: string;
     gender?: Gender;
     avatar?: string;
-  }) => {
-    if (!currentUser) return { ok: false, message: 'Vui lòng đăng nhập.' };
-    const fullName = params.fullName.trim();
-    const phone = params.phone.trim();
-    if (!fullName || !phone) {
-      return { ok: false, message: 'Họ tên và Số điện thoại không được để trống.' };
+  }): Promise<ActionResult> => {
+    const res = await accountApi.updateProfile({
+      hoTen: params.fullName.trim(),
+      soDienThoai: params.phone.trim(),
+      ngaySinh: params.dob || null,
+      gioiTinh: params.gender || null,
+      anhDaiDien: stripBaseUrlForSave(params.avatar),
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      setCurrentUser(mapHoSoToUser(res.data));
     }
-    if (!/^0\d{9}$/.test(phone)) {
-      return { ok: false, message: 'Số điện thoại phải gồm 10 chữ số bắt đầu bằng số 0.' };
-    }
-    if (users.some((u) => u.id !== currentUser.id && u.phone === phone)) {
-      return { ok: false, message: 'Số điện thoại này đã thuộc về tài khoản khác.' };
-    }
-
-    const updated: User = {
-      ...currentUser,
-      fullName,
-      phone,
-      dob: params.dob || currentUser.dob,
-      gender: params.gender || currentUser.gender,
-      avatar: params.avatar !== undefined ? params.avatar || undefined : currentUser.avatar,
-    };
-    setCurrentUser(updated);
-    setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updated : u)));
-
-    return { ok: true, message: 'Đã lưu thông tin hồ sơ cá nhân.' };
+    return { ok: true, message: res.message };
   };
 
-  // Staff / Admin: Xác nhận hoặc Hủy/Từ chối đơn hàng (ChoXacNhan hoặc DaXacNhan theo UC-41)
-  const staffConfirmOrRejectOrder = (
+  // ============================================================================
+  // Reviews (UC-53..57)
+  // ============================================================================
+  const submitReview = async (
+    productId: string,
+    rating: number,
+    comment: string,
+    images?: string[],
+    orderId?: string
+  ): Promise<ActionResult> => {
+    if (!currentUser || currentUser.role !== 'KhachHang') {
+      return { ok: false, message: 'Vui lòng đăng nhập bằng tài khoản Khách hàng để đánh giá.' };
+    }
+
+    const firstImage =
+      images && images.length > 0 ? stripBaseUrlForSave(images[0]) : null;
+
+    // Kiểm tra xem người dùng đã có đánh giá cho (productId, orderId) chưa → PUT (UC-54) hay POST (UC-53)
+    const existing = reviews.find(
+      (r) =>
+        r.productId === productId &&
+        r.userId === currentUser.id &&
+        (!orderId || r.orderId === orderId)
+    );
+
+    if (existing && (!orderId || existing.orderId === orderId)) {
+      const res = await reviewApi.update(Number(existing.id), {
+        soSao: rating,
+        noiDung: comment.trim(),
+        hinhAnh: firstImage,
+      });
+      if (!res.ok) return { ok: false, message: res.message };
+      if (res.data) {
+        const mapped = mapDanhGiaToReview(res.data, currentUser.id);
+        setReviews((prev) => prev.map((r) => (r.id === mapped.id ? mapped : r)));
+      }
+      return { ok: true, message: res.message };
+    }
+
+    if (!orderId) {
+      return {
+        ok: false,
+        message: 'Không xác định được đơn hàng hoàn thành để gửi đánh giá.',
+      };
+    }
+
+    const res = await reviewApi.create({
+      sanPhamId: Number(productId),
+      donHangId: Number(orderId),
+      soSao: rating,
+      noiDung: comment.trim(),
+      hinhAnh: firstImage,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      const mapped = mapDanhGiaToReview(res.data, currentUser.id);
+      setReviews((prev) => [mapped, ...prev]);
+    }
+    return { ok: true, message: res.message };
+  };
+
+  const deleteReview = async (reviewId: string): Promise<ActionResult> => {
+    const res = await reviewApi.remove(Number(reviewId));
+    if (!res.ok) return { ok: false, message: res.message };
+    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    return { ok: true, message: res.message };
+  };
+
+  const toggleReviewLike = async (reviewId: string): Promise<ActionResult> => {
+    if (!currentUser) {
+      return { ok: false, message: 'Vui lòng đăng nhập để thích đánh giá.' };
+    }
+    const res = await reviewApi.toggleLike(Number(reviewId));
+    if (!res.ok || !res.data) return { ok: false, message: res.message };
+
+    const { daThich, soLuotThich } = res.data;
+    setReviews((prev) =>
+      prev.map((r) => {
+        if (r.id !== reviewId) return r;
+        const likedByUserIds: string[] = [];
+        if (daThich) likedByUserIds.push(currentUser.id);
+        const extra = Math.max(0, soLuotThich - likedByUserIds.length);
+        for (let i = 0; i < extra; i += 1) {
+          likedByUserIds.push(`__like_${reviewId}_${i}`);
+        }
+        return {
+          ...r,
+          likedByUserIds,
+          likeCount: soLuotThich,
+          isLikedByMe: daThich,
+        };
+      })
+    );
+    return { ok: true, message: daThich ? 'Đã thích đánh giá.' : 'Đã bỏ thích đánh giá.' };
+  };
+
+  const replyToReview = async (
+    reviewId: string,
+    replyContent: string
+  ): Promise<ActionResult> => {
+    const res = await reviewApi.reply(Number(reviewId), replyContent.trim());
+    if (!res.ok || !res.data) return { ok: false, message: res.message };
+
+    setReviews((prev) =>
+      prev.map((r) =>
+        r.id === reviewId
+          ? {
+              ...r,
+              storeReply: res.data!.noiDung,
+              storeReplyAt: res.data!.ngayCapNhat || res.data!.ngayTao,
+              storeReplyBy: res.data!.tenNguoiTraLoi,
+            }
+          : r
+      )
+    );
+    return { ok: true, message: res.message };
+  };
+
+  const adminDeleteReview = async (
+    reviewId: string,
+    reason: string
+  ): Promise<ActionResult> => {
+    const res = await reviewApi.remove(Number(reviewId), reason.trim());
+    if (!res.ok) return { ok: false, message: res.message };
+    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    return { ok: true, message: res.message };
+  };
+
+  // ============================================================================
+  // Staff Order Processing (UC-41, UC-43, UC-44)
+  // ============================================================================
+  const staffConfirmOrRejectOrder = async (
     orderId: string,
     action: 'CONFIRM' | 'REJECT',
     reasonOrNote?: string
-  ) => {
-    if (!currentUser || currentUser.role !== 'NhanVien') {
-      return {
-        ok: false,
-        message: 'Chỉ Nhân viên mới có quyền xác nhận hoặc từ chối đơn hàng.',
-      };
+  ): Promise<ActionResult> => {
+    const res =
+      action === 'CONFIRM'
+        ? await orderApi.confirm(Number(orderId))
+        : await orderApi.cancel(Number(orderId), (reasonOrNote || '').trim());
+
+    if (!res.ok) return { ok: false, message: res.message };
+
+    await loadOrderDetail(orderId);
+    if (action === 'REJECT') {
+      await loadCatalogPublicData(currentUser?.id);
     }
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return { ok: false, message: 'Không tìm thấy đơn hàng.' };
-
-    const nowIso = new Date().toISOString();
-    const actorLabel = `${currentUser.fullName} (${ROLE_LABELS[currentUser.role]})`;
-
-    if (action === 'CONFIRM') {
-      if (order.status !== 'ChoXacNhan') {
-        return { ok: false, message: 'Chỉ đơn hàng đang "Chờ xác nhận" mới có thể xác nhận.' };
-      }
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? {
-                ...o,
-                status: 'DaXacNhan',
-                timeline: [
-                  ...o.timeline,
-                  {
-                    status: 'DaXacNhan',
-                    timestamp: nowIso,
-                    note: reasonOrNote?.trim() || 'Đã xác nhận đơn hàng và chuyển kho chuẩn bị',
-                    actorName: actorLabel,
-                  },
-                ],
-              }
-            : o
-        )
-      );
-      return { ok: true, message: `Đã xác nhận đơn hàng #${order.code}.` };
-    }
-
-    // REJECT / CANCEL: áp dụng cho cả ChoXacNhan và DaXacNhan (UC-41)
-    if (order.status !== 'ChoXacNhan' && order.status !== 'DaXacNhan') {
-      return {
-        ok: false,
-        message: 'Chỉ có thể hủy đơn hàng ở trạng thái "Chờ xác nhận" hoặc "Đã xác nhận".',
-      };
-    }
-
-    const reason = reasonOrNote?.trim() || '';
-    if (!reason) {
-      return { ok: false, message: 'Vui lòng nhập lý do hủy / từ chối đơn hàng.' };
-    }
-
-    const restoreLogs: StockHistory[] = [];
-    setProducts((prev) =>
-      prev.map((p) => {
-        const item = order.items.find((i) => i.productId === p.id);
-        if (!item) return p;
-        const nextStock = p.stock + item.quantity;
-        restoreLogs.push({
-          id: `sh-reject-${Date.now()}-${p.id}`,
-          productId: p.id,
-          orderId: order.id,
-          orderCode: order.code,
-          type: 'HoanDon',
-          quantityChange: item.quantity,
-          stockBefore: p.stock,
-          stockAfter: nextStock,
-          reasonOrNote: `Hoàn kho do hủy đơn #${order.code}: ${reason}`,
-          actorName: currentUser.fullName,
-          createdAt: nowIso,
-        });
-        return { ...p, stock: nextStock };
-      })
-    );
-    setStockHistories((prev) => [...restoreLogs, ...prev]);
-
-    if (order.voucherCode) {
-      setVouchers((prev) =>
-        prev.map((v) =>
-          v.code.toUpperCase() === order.voucherCode?.toUpperCase()
-            ? { ...v, usedCount: Math.max(0, v.usedCount - 1) }
-            : v
-        )
-      );
-    }
-
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: 'DaHuy',
-              cancelReason: reason,
-              timeline: [
-                ...o.timeline,
-                {
-                  status: 'DaHuy',
-                  timestamp: nowIso,
-                  note: `Cửa hàng hủy đơn — Lý do: ${reason}`,
-                  actorName: actorLabel,
-                },
-              ],
-            }
-          : o
-      )
-    );
-
-    return { ok: true, message: `Đã hủy đơn #${order.code} và hoàn trả tồn kho.` };
+    return { ok: true, message: res.message };
   };
 
-  // Staff only (CRIT-03): Cập nhật trạng thái đơn hàng tuần tự (DaXacNhan -> DangChuanBi -> DangGiao -> HoanThanh)
-  const staffAdvanceOrderStatus = (
+  const staffAdvanceOrderStatus = async (
     orderId: string,
     nextStatus: OrderStatus,
     note?: string
-  ) => {
-    if (!currentUser || currentUser.role !== 'NhanVien') {
-      return {
-        ok: false,
-        message: 'Chỉ Nhân viên mới có quyền cập nhật trạng thái đơn hàng.',
-      };
-    }
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return { ok: false, message: 'Không tìm thấy đơn hàng.' };
+  ): Promise<ActionResult> => {
+    const res = await orderApi.updateStatus(Number(orderId), nextStatus, note?.trim());
+    if (!res.ok) return { ok: false, message: res.message };
 
-    const validTransitions: Partial<Record<OrderStatus, OrderStatus>> = {
-      DaXacNhan: 'DangChuanBi',
-      DangChuanBi: 'DangGiao',
-      DangGiao: 'HoanThanh',
-    };
-
-    if (validTransitions[order.status] !== nextStatus) {
-      return {
-        ok: false,
-        message: 'Trạng thái đơn hàng phải được cập nhật tuần tự theo từng bước quy trình.',
-      };
-    }
-
-    const defaultNotes: Partial<Record<OrderStatus, string>> = {
-      DangChuanBi: 'Đang đóng gói sản phẩm và bàn giao đơn vị vận chuyển',
-      DangGiao: 'Đơn hàng đang trên đường giao đến địa chỉ người nhận',
-      HoanThanh: 'Giao hàng thành công — Đơn hàng hoàn tất',
-    };
-
-    const nowIso = new Date().toISOString();
-
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: nextStatus,
-              isPaid: nextStatus === 'HoanThanh' ? true : o.isPaid,
-              timeline: [
-                ...o.timeline,
-                {
-                  status: nextStatus,
-                  timestamp: nowIso,
-                  note: note?.trim() || defaultNotes[nextStatus] || 'Cập nhật trạng thái',
-                  actorName: `${currentUser.fullName} (${ROLE_LABELS[currentUser.role]})`,
-                },
-              ],
-            }
-          : o
-      )
-    );
-
-    return { ok: true, message: `Đã chuyển đơn #${order.code} sang bước tiếp theo.` };
+    await loadOrderDetail(orderId);
+    return { ok: true, message: res.message };
   };
 
-  // Admin: Quản lý Danh mục
-  const createCategory = (input: {
+  // ============================================================================
+  // Admin Category & Product Management (UC-13..16, UC-20..23)
+  // ============================================================================
+  const createCategory = async (input: {
     name: string;
     description: string;
     imageUrl?: string;
     isVisible?: boolean;
-  }) => {
-    const name = input.name.trim();
-    const description = input.description.trim();
-    if (!name) return { ok: false, message: 'Vui lòng nhập tên danh mục.' };
-    if (
-      categories.some(
-        (c) => !c.isDeleted && c.name.toLowerCase() === name.toLowerCase()
-      )
-    ) {
-      return { ok: false, message: 'Tên danh mục này đã tồn tại.' };
+  }): Promise<ActionResult> => {
+    const res = await categoryApi.create({
+      ten: input.name.trim(),
+      moTa: input.description.trim() || null,
+      hinhAnh: stripBaseUrlForSave(input.imageUrl),
+      hienThi: input.isVisible ?? true,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      setCategories((prev) => [...prev, mapDanhMucToCategory(res.data!)]);
     }
-
-    const num = String(categories.length + 1).padStart(2, '0');
-    const newCat: Category = {
-      id: `cat-${Date.now()}`,
-      name,
-      description: description || `Danh mục sản phẩm ${name}`,
-      imageUrl: input.imageUrl?.trim() || createPlaceholderImage(num),
-      iconName: num,
-      isVisible: input.isVisible !== undefined ? input.isVisible : true,
-      isDeleted: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    setCategories((prev) => [...prev, newCat]);
-    return { ok: true, message: `Đã tạo danh mục "${name}".` };
+    return { ok: true, message: res.message };
   };
 
-  const updateCategory = (
+  const updateCategory = async (
     id: string,
     input: { name: string; description: string; imageUrl?: string }
-  ) => {
-    const name = input.name.trim();
-    const description = input.description.trim();
-    if (!name) return { ok: false, message: 'Tên danh mục không được để trống.' };
-    if (
-      categories.some(
-        (c) =>
-          c.id !== id &&
-          !c.isDeleted &&
-          c.name.toLowerCase() === name.toLowerCase()
-      )
-    ) {
-      return { ok: false, message: 'Tên danh mục đã trùng với một danh mục khác.' };
+  ): Promise<ActionResult> => {
+    const existing = categories.find((c) => c.id === id);
+    const res = await categoryApi.update(Number(id), {
+      ten: input.name.trim(),
+      moTa: input.description.trim() || null,
+      hinhAnh: stripBaseUrlForSave(input.imageUrl),
+      hienThi: existing?.isVisible ?? true,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      const mapped = mapDanhMucToCategory(res.data);
+      setCategories((prev) => prev.map((c) => (c.id === id ? mapped : c)));
     }
-
-    setCategories((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              name,
-              description,
-              imageUrl: input.imageUrl ? input.imageUrl : c.imageUrl,
-            }
-          : c
-      )
-    );
-    return { ok: true, message: 'Đã cập nhật thông tin danh mục.' };
+    return { ok: true, message: res.message };
   };
 
-  const toggleCategoryVisibility = (id: string) => {
-    const target = categories.find((c) => c.id === id);
-    if (!target) return { ok: false, message: 'Danh mục không tồn tại.' };
-    const nextVisible = !target.isVisible;
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isVisible: nextVisible } : c))
-    );
-    return {
-      ok: true,
-      message: nextVisible
-        ? `Đã hiển thị lại danh mục "${target.name}".`
-        : `Đã tạm ẩn danh mục "${target.name}" khỏi cửa hàng.`,
-    };
-  };
+  const toggleCategoryVisibility = async (id: string): Promise<ActionResult> => {
+    const existing = categories.find((c) => c.id === id);
+    if (!existing) return { ok: false, message: 'Không tìm thấy danh mục.' };
 
-  const deleteCategory = (id: string) => {
-    const target = categories.find((c) => c.id === id);
-    if (!target) return { ok: false, message: 'Danh mục không tồn tại.' };
-
-    const activeProductsInCat = products.filter(
-      (p) => !p.isDeleted && p.categoryId === id
-    );
-    if (activeProductsInCat.length > 0) {
-      return {
-        ok: false,
-        message: `Không thể xóa danh mục đang chứa ${activeProductsInCat.length} sản phẩm. Hãy chuyển sang chế độ "Tạm ẩn".`,
-      };
+    const res = await categoryApi.toggleVisibility(Number(id), !existing.isVisible);
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      const mapped = mapDanhMucToCategory(res.data);
+      setCategories((prev) => prev.map((c) => (c.id === id ? mapped : c)));
     }
-
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isDeleted: true, isVisible: false } : c))
-    );
-    return { ok: true, message: `Đã xóa danh mục "${target.name}".` };
+    await loadCatalogPublicData(currentUser?.id);
+    return { ok: true, message: res.message };
   };
 
-  // Admin: Quản lý Sản phẩm
-  const createProduct = (input: {
+  const deleteCategory = async (id: string): Promise<ActionResult> => {
+    const res = await categoryApi.remove(Number(id));
+    if (!res.ok) return { ok: false, message: res.message };
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    return { ok: true, message: res.message };
+  };
+
+  const createProduct = async (input: {
     code: string;
     name: string;
     categoryId: string;
@@ -1769,82 +1192,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     minStockThreshold: number;
     initialStock: number;
     isVisible?: boolean;
-  }) => {
-    const code = input.code.trim().toUpperCase();
-    const name = input.name.trim();
-    const description = input.description.trim();
-    if (!code || !name || !input.categoryId) {
-      return { ok: false, message: 'Vui lòng điền mã SKU, tên sản phẩm và chọn danh mục.' };
-    }
-    if (!description) {
-      return { ok: false, message: 'Vui lòng nhập mô tả sản phẩm.' };
-    }
-    if (input.price <= 0) {
-      return { ok: false, message: 'Giá bán sản phẩm phải lớn hơn 0.' };
-    }
-    if (products.some((p) => !p.isDeleted && p.code.toUpperCase() === code)) {
-      return { ok: false, message: 'Mã SKU này đã tồn tại trên hệ thống.' };
-    }
-    // UC-20 4b: Không cho phép trùng tên sản phẩm trong cùng danh mục
-    if (
-      products.some(
-        (p) =>
-          !p.isDeleted &&
-          p.categoryId === input.categoryId &&
-          p.name.trim().toLowerCase() === name.toLowerCase()
-      )
-    ) {
-      return {
-        ok: false,
-        message: 'Tên sản phẩm này đã tồn tại trong cùng danh mục. Vui lòng dùng tên khác.',
-      };
-    }
+  }): Promise<ActionResult> => {
+    const res = await productApi.create({
+      danhMucId: Number(input.categoryId),
+      maSanPham: input.code.trim(),
+      ten: input.name.trim(),
+      moTa: input.description.trim(),
+      hinhAnh: stripBaseUrlForSave(input.imageUrl),
+      giaBan: input.price,
+      soLuongBanDau: input.initialStock,
+      nguongToiThieu: input.minStockThreshold,
+      hienThi: input.isVisible ?? true,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
 
-    const num = String(products.length + 1).padStart(2, '0');
-    const nowIso = new Date().toISOString();
-    const initialStock = Math.max(0, Math.floor(input.initialStock || 0));
-    const parsedThreshold = Number.isFinite(input.minStockThreshold)
-      ? Math.max(0, Math.floor(input.minStockThreshold))
-      : 0;
-
-    const newProduct: Product = {
-      id: `prd-${Date.now()}`,
-      code,
-      name,
-      categoryId: input.categoryId,
-      price: input.price,
-      description,
-      imageUrl: input.imageUrl?.trim() || createPlaceholderImage(num),
-      stock: initialStock,
-      minStockThreshold: parsedThreshold,
-      isVisible: input.isVisible !== undefined ? input.isVisible : true,
-      isDeleted: false,
-      createdAt: nowIso,
-    };
-
-    setProducts((prev) => [newProduct, ...prev]);
-
-    if (initialStock > 0) {
-      setStockHistories((prev) => [
-        {
-          id: `sh-init-${Date.now()}`,
-          productId: newProduct.id,
-          type: 'NhapTang',
-          quantityChange: initialStock,
-          stockBefore: 0,
-          stockAfter: initialStock,
-          reasonOrNote: 'Khởi tạo tồn kho ban đầu khi tạo sản phẩm mới',
-          actorName: currentUser?.fullName || 'Admin',
-          createdAt: nowIso,
-        },
-        ...prev,
-      ]);
+    await loadCatalogPublicData(currentUser?.id);
+    if (currentUser?.role === 'QuanLy') {
+      await hydrateInventoryForManager();
     }
-
-    return { ok: true, message: `Đã thêm sản phẩm "${name}" (${code}).` };
+    return { ok: true, message: res.message };
   };
 
-  const updateProduct = (
+  const updateProduct = async (
     id: string,
     input: {
       name: string;
@@ -1853,202 +1222,114 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: string;
       imageUrl?: string;
     }
-  ) => {
-    const name = input.name.trim();
-    const description = input.description.trim();
-    if (!name || !input.categoryId) {
-      return { ok: false, message: 'Tên sản phẩm và danh mục không được để trống.' };
-    }
-    if (!description) {
-      return { ok: false, message: 'Vui lòng nhập mô tả sản phẩm.' };
-    }
-    if (input.price <= 0) {
-      return { ok: false, message: 'Giá bán phải lớn hơn 0.' };
-    }
-    if (
-      products.some(
-        (p) =>
-          p.id !== id &&
-          !p.isDeleted &&
-          p.categoryId === input.categoryId &&
-          p.name.trim().toLowerCase() === name.toLowerCase()
-      )
-    ) {
-      return {
-        ok: false,
-        message: 'Tên sản phẩm này đã tồn tại trong cùng danh mục.',
-      };
-    }
+  ): Promise<ActionResult> => {
+    const existing = products.find((p) => p.id === id);
+    if (!existing) return { ok: false, message: 'Không tìm thấy sản phẩm.' };
 
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              name,
-              categoryId: input.categoryId,
-              price: input.price,
-              description,
-              imageUrl: input.imageUrl ? input.imageUrl : p.imageUrl,
-            }
-          : p
-      )
-    );
-
-    return { ok: true, message: 'Đã cập nhật thông tin sản phẩm.' };
+    const res = await productApi.update(Number(id), {
+      danhMucId: Number(input.categoryId),
+      maSanPham: existing.code,
+      ten: input.name.trim(),
+      moTa: input.description.trim(),
+      hinhAnh: stripBaseUrlForSave(input.imageUrl),
+      giaBan: input.price,
+      hienThi: existing.isVisible,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      const mapped = mapSanPhamToProduct(res.data, existing);
+      setProducts((prev) => prev.map((p) => (p.id === id ? mapped : p)));
+    }
+    return { ok: true, message: res.message };
   };
 
-  const toggleProductVisibility = (id: string) => {
-    const target = products.find((p) => p.id === id);
-    if (!target) return { ok: false, message: 'Không tìm thấy sản phẩm.' };
-    const nextVisible = !target.isVisible;
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isVisible: nextVisible } : p))
-    );
-    return {
-      ok: true,
-      message: nextVisible
-        ? `Đã mở bán lại "${target.name}" trên cửa hàng.`
-        : `Đã tạm ẩn "${target.name}". Sản phẩm trong giỏ khách hàng sẽ được đánh dấu ngừng kinh doanh.`,
-    };
-  };
+  const toggleProductVisibility = async (id: string): Promise<ActionResult> => {
+    const existing = products.find((p) => p.id === id);
+    if (!existing) return { ok: false, message: 'Không tìm thấy sản phẩm.' };
 
-  const deleteProduct = (id: string) => {
-    const target = products.find((p) => p.id === id);
-    if (!target) return { ok: false, message: 'Không tìm thấy sản phẩm.' };
-
-    const hasOrderHistory = orders.some((o) =>
-      o.items.some((item) => item.productId === id)
-    );
-    if (hasOrderHistory) {
-      return {
-        ok: false,
-        message: `Sản phẩm "${target.name}" đã phát sinh trong đơn hàng. Vui lòng sử dụng tính năng "Tạm ẩn" để bảo toàn lịch sử đối soát.`,
-      };
+    const res = await productApi.toggleVisibility(Number(id), !existing.isVisible);
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      const mapped = mapSanPhamToProduct(res.data, existing);
+      setProducts((prev) => prev.map((p) => (p.id === id ? mapped : p)));
     }
-
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isDeleted: true, isVisible: false } : p))
-    );
-    return { ok: true, message: `Đã xóa sản phẩm "${target.name}".` };
+    return { ok: true, message: res.message };
   };
 
-  // Admin: Quản lý Tồn kho & Sổ cái biến động (StockHistories)
-  const importStock = (params: {
+  const deleteProduct = async (id: string): Promise<ActionResult> => {
+    const res = await productApi.remove(Number(id));
+    if (!res.ok) return { ok: false, message: res.message };
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    return { ok: true, message: res.message };
+  };
+
+  // ============================================================================
+  // Admin Inventory Management (UC-24..28)
+  // ============================================================================
+  const importStock = async (params: {
     productId: string;
     quantity: number;
     importPrice?: number;
     supplier?: string;
     note: string;
-  }) => {
-    const product = products.find((p) => p.id === params.productId && !p.isDeleted);
-    if (!product) return { ok: false, message: 'Vui lòng chọn sản phẩm hợp lệ.' };
-    const qty = Math.floor(params.quantity);
-    if (!qty || qty <= 0) {
-      return { ok: false, message: 'Số lượng nhập kho phải là số nguyên dương.' };
-    }
-    if (params.importPrice !== undefined && params.importPrice < 0) {
-      return { ok: false, message: 'Đơn giá nhập không hợp lệ.' };
-    }
-    const reasonNote = params.note.trim();
-    if (!reasonNote) {
-      return { ok: false, message: 'Vui lòng nhập lý do / ghi chú phiếu nhập kho.' };
-    }
+  }): Promise<ActionResult> => {
+    const res = await inventoryApi.importStock({
+      sanPhamId: Number(params.productId),
+      soLuongNhap: params.quantity,
+      giaNhap: params.importPrice ?? null,
+      nhaCungCap: params.supplier?.trim() || null,
+      ghiChu: params.note.trim() || null,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
 
-    const nowIso = new Date().toISOString();
-    const nextStock = product.stock + qty;
-
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, stock: nextStock } : p))
-    );
-
-    const newLog: StockHistory = {
-      id: `sh-imp-${Date.now()}`,
-      productId: product.id,
-      type: 'NhapTang',
-      quantityChange: qty,
-      stockBefore: product.stock,
-      stockAfter: nextStock,
-      supplier: params.supplier?.trim() || undefined,
-      importPrice:
-        params.importPrice !== undefined && params.importPrice > 0
-          ? params.importPrice
-          : undefined,
-      reasonOrNote: reasonNote,
-      actorName: currentUser?.fullName || 'Admin',
-      createdAt: nowIso,
-    };
-
-    setStockHistories((prev) => [newLog, ...prev]);
-
-    return {
-      ok: true,
-      message: `Đã nhập kho +${qty} sản phẩm "${product.name}". Tồn mới: ${nextStock}.`,
-    };
+    await hydrateInventoryForManager();
+    return { ok: true, message: res.message };
   };
 
-  const adjustStockDecrease = (params: {
+  const adjustStockDecrease = async (params: {
     productId: string;
     quantityToSubtract: number;
     reason: string;
-  }) => {
-    const product = products.find((p) => p.id === params.productId && !p.isDeleted);
-    if (!product) return { ok: false, message: 'Vui lòng chọn sản phẩm hợp lệ.' };
-    const qty = Math.floor(params.quantityToSubtract);
-    if (!qty || qty <= 0) {
-      return { ok: false, message: 'Số lượng xuất giảm phải lớn hơn 0.' };
-    }
-    if (qty > product.stock) {
-      return {
-        ok: false,
-        message: `Số lượng xuất giảm (${qty}) không được vượt quá tồn kho hiện tại (${product.stock}).`,
-      };
-    }
-    const reason = params.reason.trim();
-    if (!reason) {
-      return { ok: false, message: 'Bắt buộc nhập lý do điều chỉnh giảm tồn kho.' };
-    }
+  }): Promise<ActionResult> => {
+    const res = await inventoryApi.adjustDecrease({
+      sanPhamId: Number(params.productId),
+      soLuongGiam: params.quantityToSubtract,
+      lyDo: params.reason.trim(),
+    });
+    if (!res.ok) return { ok: false, message: res.message };
 
-    const nowIso = new Date().toISOString();
-    const nextStock = product.stock - qty;
-
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, stock: nextStock } : p))
-    );
-
-    const newLog: StockHistory = {
-      id: `sh-adj-${Date.now()}`,
-      productId: product.id,
-      type: 'DieuChinhGiam',
-      quantityChange: -qty,
-      stockBefore: product.stock,
-      stockAfter: nextStock,
-      reasonOrNote: reason,
-      actorName: currentUser?.fullName || 'Admin',
-      createdAt: nowIso,
-    };
-
-    setStockHistories((prev) => [newLog, ...prev]);
-
-    return {
-      ok: true,
-      message: `Đã điều chỉnh giảm -${qty} sản phẩm "${product.name}". Tồn còn: ${nextStock}.`,
-    };
+    await hydrateInventoryForManager();
+    return { ok: true, message: res.message };
   };
 
-  const updateMinStockThreshold = (productId: string, threshold: number) => {
-    const val = Math.floor(threshold);
-    if (Number.isNaN(val) || val < 0) {
-      return { ok: false, message: 'Ngưỡng cảnh báo tồn tối thiểu phải từ 0 trở lên.' };
+  const updateMinStockThreshold = async (
+    productId: string,
+    threshold: number
+  ): Promise<ActionResult> => {
+    let tonKhoId = products.find((p) => p.id === productId)?.tonKhoId;
+
+    if (!tonKhoId) {
+      const invRes = await inventoryApi.list({ page: 1, pageSize: 100 });
+      if (invRes.ok && invRes.data) {
+        tonKhoId = invRes.data.items.find((tk) => String(tk.sanPhamId) === productId)?.tonKhoId;
+      }
     }
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, minStockThreshold: val } : p))
-    );
-    return { ok: true, message: 'Đã cập nhật ngưỡng cảnh báo tồn tối thiểu.' };
+
+    if (!tonKhoId) {
+      return { ok: false, message: 'Không tìm thấy bản ghi tồn kho của sản phẩm này.' };
+    }
+
+    const res = await inventoryApi.updateMinThreshold(tonKhoId, threshold);
+    if (!res.ok) return { ok: false, message: res.message };
+
+    await hydrateInventoryForManager();
+    return { ok: true, message: res.message };
   };
 
-  // Admin: Quản lý Mã giảm giá
-  const createVoucher = (input: {
+  // ============================================================================
+  // Admin Voucher Management (UC-48..50)
+  // ============================================================================
+  const createVoucher = async (input: {
     code: string;
     description?: string;
     discountType: DiscountType;
@@ -2059,61 +1340,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     endDate: string;
     usageLimit: number;
     isActive?: boolean;
-  }) => {
-    const code = input.code.trim().toUpperCase();
-    const description = (input.description || '').trim();
-    if (!code) {
-      return { ok: false, message: 'Vui lòng nhập mã giảm giá.' };
+  }): Promise<ActionResult> => {
+    const res = await voucherApi.create({
+      ma: input.code.trim().toUpperCase(),
+      moTa: input.description?.trim() || null,
+      loai: input.discountType,
+      giaTri: input.discountValue,
+      giamToiDa: input.discountType === 'PhanTram' ? input.maxDiscountAmount ?? null : null,
+      donToiThieu: input.minOrderValue,
+      ngayBatDau: toIsoDateOffset(input.startDate, false),
+      ngayKetThuc: toIsoDateOffset(input.endDate, true),
+      soLuotToiDa: input.usageLimit,
+      hienThi: input.isActive ?? true,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      setVouchers((prev) => [mapMaGiamGiaToVoucher(res.data!), ...prev]);
     }
-    if (!/^[A-Z0-9_-]{3,50}$/.test(code)) {
-      return {
-        ok: false,
-        message: 'Mã giảm giá chỉ gồm chữ in hoa, chữ số, gạch ngang/dưới (3–50 ký tự, không dấu cách).',
-      };
-    }
-    if (vouchers.some((v) => !v.isDeleted && v.code.toUpperCase() === code)) {
-      return { ok: false, message: 'Mã giảm giá này đã tồn tại trên hệ thống.' };
-    }
-    if (input.discountValue <= 0) {
-      return { ok: false, message: 'Giá trị giảm phải lớn hơn 0.' };
-    }
-    if (input.discountType === 'PhanTram' && input.discountValue > 100) {
-      return { ok: false, message: 'Mức giảm theo phần trăm không được vượt quá 100%.' };
-    }
-    if (input.usageLimit <= 0) {
-      return { ok: false, message: 'Giới hạn lượt sử dụng phải lớn hơn 0.' };
-    }
-    if (new Date(input.endDate) <= new Date(input.startDate)) {
-      return { ok: false, message: 'Ngày kết thúc phải sau ngày bắt đầu.' };
-    }
-
-    const newVoucher: Voucher = {
-      id: `vch-${Date.now()}`,
-      code,
-      description,
-      discountType: input.discountType,
-      discountValue: input.discountValue,
-      maxDiscountAmount:
-        input.discountType === 'PhanTram' &&
-        input.maxDiscountAmount &&
-        input.maxDiscountAmount > 0
-          ? input.maxDiscountAmount
-          : undefined,
-      minOrderValue: Math.max(0, input.minOrderValue || 0),
-      startDate: new Date(input.startDate).toISOString(),
-      endDate: new Date(input.endDate).toISOString(),
-      usageLimit: Math.floor(input.usageLimit),
-      usedCount: 0,
-      isActive: input.isActive !== undefined ? input.isActive : true,
-      isDeleted: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    setVouchers((prev) => [newVoucher, ...prev]);
-    return { ok: true, message: `Đã tạo mã giảm giá "${code}".` };
+    return { ok: true, message: res.message };
   };
 
-  const updateVoucher = (
+  const updateVoucher = async (
     id: string,
     input: {
       code: string;
@@ -2126,213 +1373,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       endDate: string;
       usageLimit: number;
     }
-  ) => {
-    const target = vouchers.find((v) => v.id === id);
-    if (!target) return { ok: false, message: 'Không tìm thấy mã giảm giá.' };
-
-    if (input.usageLimit < target.usedCount) {
-      return {
-        ok: false,
-        message: `Tổng lượt sử dụng không được nhỏ hơn số lượt đã dùng (${target.usedCount}).`,
-      };
+  ): Promise<ActionResult> => {
+    const existing = vouchers.find((v) => v.id === id);
+    const res = await voucherApi.update(Number(id), {
+      ma: input.code.trim().toUpperCase(),
+      moTa: input.description?.trim() || null,
+      loai: input.discountType,
+      giaTri: input.discountValue,
+      giamToiDa: input.discountType === 'PhanTram' ? input.maxDiscountAmount ?? null : null,
+      donToiThieu: input.minOrderValue,
+      ngayBatDau: toIsoDateOffset(input.startDate, false),
+      ngayKetThuc: toIsoDateOffset(input.endDate, true),
+      soLuotToiDa: input.usageLimit,
+      hienThi: existing?.isActive ?? true,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      const mapped = mapMaGiamGiaToVoucher(res.data);
+      setVouchers((prev) => prev.map((v) => (v.id === id ? mapped : v)));
     }
-    if (new Date(input.endDate) <= new Date(input.startDate)) {
-      return { ok: false, message: 'Ngày kết thúc phải sau ngày bắt đầu.' };
+    return { ok: true, message: res.message };
+  };
+
+  const toggleVoucherActive = async (id: string): Promise<ActionResult> => {
+    const existing = vouchers.find((v) => v.id === id);
+    if (!existing) return { ok: false, message: 'Không tìm thấy mã giảm giá.' };
+
+    const res = await voucherApi.update(Number(id), {
+      ma: existing.code,
+      moTa: existing.description || null,
+      loai: existing.discountType,
+      giaTri: existing.discountValue,
+      giamToiDa:
+        existing.discountType === 'PhanTram' ? existing.maxDiscountAmount ?? null : null,
+      donToiThieu: existing.minOrderValue,
+      ngayBatDau: existing.startDate,
+      ngayKetThuc: existing.endDate,
+      soLuotToiDa: existing.usageLimit,
+      hienThi: !existing.isActive,
+    });
+    if (!res.ok) return { ok: false, message: res.message };
+    if (res.data) {
+      const mapped = mapMaGiamGiaToVoucher(res.data);
+      setVouchers((prev) => prev.map((v) => (v.id === id ? mapped : v)));
     }
-
-    // UC-49 4b: Khi mã đã được dùng, khóa code, loại giảm, mức giảm, mức giảm tối đa và đơn tối thiểu
-    const isAlreadyUsed = target.usedCount > 0;
-    const nextCode = isAlreadyUsed ? target.code : input.code.trim().toUpperCase();
-    const nextType = isAlreadyUsed ? target.discountType : input.discountType;
-    const nextValue = isAlreadyUsed ? target.discountValue : input.discountValue;
-    const nextMaxDiscount = isAlreadyUsed
-      ? target.maxDiscountAmount
-      : nextType === 'PhanTram' && input.maxDiscountAmount && input.maxDiscountAmount > 0
-        ? input.maxDiscountAmount
-        : undefined;
-    const nextMinOrder = isAlreadyUsed
-      ? target.minOrderValue
-      : Math.max(0, input.minOrderValue || 0);
-
-    setVouchers((prev) =>
-      prev.map((v) =>
-        v.id === id
-          ? {
-              ...v,
-              code: nextCode,
-              description:
-                input.description !== undefined ? input.description.trim() : v.description,
-              discountType: nextType,
-              discountValue: nextValue,
-              maxDiscountAmount: nextMaxDiscount,
-              minOrderValue: nextMinOrder,
-              startDate: new Date(input.startDate).toISOString(),
-              endDate: new Date(input.endDate).toISOString(),
-              usageLimit: Math.floor(input.usageLimit),
-            }
-          : v
-      )
-    );
-
     return {
       ok: true,
-      message: isAlreadyUsed
-        ? `Đã cập nhật mã "${target.code}" (giữ nguyên mã, loại giảm và điều kiện giá trị gốc do đã có đơn áp dụng).`
-        : `Đã cập nhật mã giảm giá "${nextCode}".`,
+      message: existing.isActive
+        ? `Đã ngừng áp dụng mã ${existing.code}.`
+        : `Đã kích hoạt lại mã ${existing.code}.`,
     };
   };
 
-  const toggleVoucherActive = (id: string) => {
-    const target = vouchers.find((v) => v.id === id);
-    if (!target) return { ok: false, message: 'Không tìm thấy mã giảm giá.' };
-    const nextActive = !target.isActive;
-    setVouchers((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, isActive: nextActive } : v))
-    );
-    return {
-      ok: true,
-      message: nextActive
-        ? `Đã kích hoạt lại mã "${target.code}".`
-        : `Đã tạm ngừng áp dụng mã "${target.code}".`,
-    };
+  const deleteVoucher = async (id: string): Promise<ActionResult> => {
+    const res = await voucherApi.remove(Number(id));
+    if (!res.ok) return { ok: false, message: res.message };
+
+    // Tải lại danh sách vì mã đã dùng trong đơn hàng sẽ chuyển sang hienThi=false thay vì xóa hẳn
+    const listRes = await voucherApi.list();
+    if (listRes.ok && listRes.data) {
+      setVouchers(listRes.data.map(mapMaGiamGiaToVoucher));
+    } else {
+      setVouchers((prev) => prev.filter((v) => v.id !== id));
+    }
+    return { ok: true, message: res.message };
   };
 
-  const deleteVoucher = (id: string) => {
-    const target = vouchers.find((v) => v.id === id);
-    if (!target) return { ok: false, message: 'Không tìm thấy mã giảm giá.' };
-
-    const usedInOrders =
-      target.usedCount > 0 ||
-      orders.some((o) => o.voucherCode?.toUpperCase() === target.code.toUpperCase());
-
-    if (usedInOrders) {
-      setVouchers((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, isActive: false } : v))
-      );
-      return {
-        ok: true,
-        message: `Mã "${target.code}" đã phát sinh đơn hàng nên được chuyển sang trạng thái "Ngừng áp dụng" để bảo toàn dữ liệu.`,
-      };
-    }
-
-    setVouchers((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, isDeleted: true, isActive: false } : v))
-    );
-    return { ok: true, message: `Đã xóa mã giảm giá "${target.code}".` };
-  };
-
-  // Staff / Admin: Phản hồi & Kiểm duyệt Đánh giá
-  const replyToReview = (reviewId: string, replyContent: string) => {
-    const content = replyContent.trim();
-    if (!content) {
-      return { ok: false, message: 'Vui lòng nhập nội dung phản hồi.' };
-    }
-    const nowIso = new Date().toISOString();
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === reviewId
-          ? {
-              ...r,
-              storeReply: content,
-              storeReplyAt: nowIso,
-              storeReplyBy: currentUser
-                ? `${currentUser.fullName} (${ROLE_LABELS[currentUser.role]})`
-                : 'HCShop Support',
-            }
-          : r
-      )
-    );
-    return { ok: true, message: 'Đã gửi phản hồi của cửa hàng.' };
-  };
-
-  const adminDeleteReview = (reviewId: string, reason: string) => {
-    if (!currentUser || currentUser.role !== 'QuanLy') {
-      return { ok: false, message: 'Chỉ Quản lý mới có quyền gỡ bỏ đánh giá.' };
-    }
-    if (!reason.trim()) {
-      return { ok: false, message: 'Vui lòng nhập lý do gỡ bỏ đánh giá.' };
-    }
-    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
-    return { ok: true, message: 'Đã gỡ bỏ đánh giá vi phạm.' };
-  };
-
-  // Admin: Quản lý Tài khoản & Khóa / Mở khóa (UC-10 2a: chỉ khóa tài khoản Khách hàng)
-  const toggleAccountLock = (userId: string, lockReason?: string) => {
-    if (!currentUser || currentUser.role !== 'QuanLy') {
-      return { ok: false, message: 'Chỉ Quản lý mới có quyền khóa/mở khóa tài khoản.' };
-    }
-    if (currentUser.id === userId) {
-      return {
-        ok: false,
-        message: 'Không thể tự khóa tài khoản Quản trị viên đang đăng nhập.',
-      };
-    }
+  // ============================================================================
+  // Admin Account Management (UC-08..10)
+  // ============================================================================
+  const toggleAccountLock = async (
+    userId: string,
+    lockReason?: string
+  ): Promise<ActionResult> => {
     const target = users.find((u) => u.id === userId);
     if (!target) return { ok: false, message: 'Không tìm thấy tài khoản.' };
 
-    if (target.role !== 'KhachHang') {
-      return {
-        ok: false,
-        message: 'Theo quy định UC-10, không được khóa hoặc mở khóa tài khoản Nhân viên và Quản lý.',
-      };
+    const res = target.isLocked
+      ? await accountApi.unlockAccount(Number(userId))
+      : await accountApi.lockAccount(Number(userId), (lockReason || '').trim());
+
+    if (!res.ok) return { ok: false, message: res.message };
+
+    const accRes = await accountApi.listAccounts({ page: 1, pageSize: 100 });
+    if (accRes.ok && accRes.data) {
+      setUsers(accRes.data.items.map(mapTaiKhoanItemToUser));
     }
 
-    const nowIso = new Date().toISOString();
-
-    if (!target.isLocked) {
-      const reason = lockReason?.trim() || '';
-      if (!reason) {
-        return { ok: false, message: 'Vui lòng nhập lý do khóa tài khoản.' };
-      }
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId ? { ...u, isLocked: true, lockReason: reason } : u
-        )
-      );
-      setAccountLockHistories((prev) => [
-        {
-          id: `alh-${Date.now()}`,
-          userId,
-          newStatus: 'BiKhoa',
-          reason,
-          actorName: currentUser.fullName,
-          createdAt: nowIso,
-        },
-        ...prev,
-      ]);
-      return { ok: true, message: `Đã khóa tài khoản "${target.fullName}".` };
-    } else {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId
-            ? {
-                ...u,
-                isLocked: false,
-                lockReason: undefined,
-                failedLoginAttempts: 0,
-                lockoutUntil: undefined,
-              }
-            : u
-        )
-      );
-      setAccountLockHistories((prev) => [
-        {
-          id: `alh-${Date.now()}`,
-          userId,
-          newStatus: 'HoatDong',
-          reason: lockReason?.trim() || 'Quản lý mở khóa tài khoản',
-          actorName: currentUser.fullName,
-          createdAt: nowIso,
-        },
-        ...prev,
-      ]);
-      return { ok: true, message: `Đã mở khóa tài khoản "${target.fullName}".` };
-    }
+    const warning = res.data?.canhBao ? ` ${res.data.canhBao}` : '';
+    return { ok: true, message: `${res.message}${warning}` };
   };
 
   return (
     <AppContext.Provider
       value={{
+        isBootstrapping,
+        apiConnectionError,
         currentUser,
         users,
         accountLockHistories,
@@ -2349,8 +1485,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedCategoryId,
         setSearchQuery,
         setSelectedCategoryId,
-        switchDemoRole,
-        resetDemoData,
+        refreshAllData,
+        loadProductDetail,
+        loadOrderDetail,
+        loadAccountLockHistory,
         addToCart,
         updateCartQuantity,
         removeFromCart,
@@ -2400,8 +1538,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
-export const useApp = () => {
+export const useApp = (): AppContextType => {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used inside AppProvider');
+  if (!ctx) {
+    throw new Error('useApp must be used within AppProvider');
+  }
   return ctx;
 };

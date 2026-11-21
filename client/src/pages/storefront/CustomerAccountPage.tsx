@@ -163,7 +163,7 @@ export const CustomerAccountPage: React.FC = () => {
     setShowAddressModal(true);
   };
 
-  const handleSaveAddress = (e: React.FormEvent) => {
+  const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       recipientName: addrRecipient,
@@ -176,8 +176,8 @@ export const CustomerAccountPage: React.FC = () => {
     };
 
     const res = editingAddress
-      ? updateShippingAddress(editingAddress.id, payload)
-      : addShippingAddress(payload);
+      ? await updateShippingAddress(editingAddress.id, payload)
+      : await addShippingAddress(payload);
 
     setFeedback({ ok: res.ok, text: res.message });
     if (res.ok) {
@@ -185,9 +185,9 @@ export const CustomerAccountPage: React.FC = () => {
     }
   };
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = updateProfile({
+    const res = await updateProfile({
       fullName,
       phone,
       dob,
@@ -197,9 +197,9 @@ export const CustomerAccountPage: React.FC = () => {
     setFeedback({ ok: res.ok, text: res.message });
   };
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = changePassword({
+    const res = await changePassword({
       currentPassword,
       newPassword,
       confirmPassword,
@@ -212,9 +212,9 @@ export const CustomerAccountPage: React.FC = () => {
     }
   };
 
-  const handleSecurityQuestionSubmit = (e: React.FormEvent) => {
+  const handleSecurityQuestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = updateSecurityQuestion({
+    const res = await updateSecurityQuestion({
       currentPassword: secCurrentPassword,
       securityQuestion: secQuestion,
       securityAnswer: secAnswer,
@@ -385,6 +385,7 @@ export const CustomerAccountPage: React.FC = () => {
               </div>
 
               <ImageUploadField
+                uploadFolder="avatars"
                 label="Ảnh đại diện (Avatar)"
                 value={avatar}
                 onChange={setAvatar}
@@ -552,8 +553,8 @@ export const CustomerAccountPage: React.FC = () => {
                         {!addr.isDefault && (
                           <button
                             type="button"
-                            onClick={() => {
-                              const res = setDefaultShippingAddress(addr.id);
+                            onClick={async () => {
+                              const res = await setDefaultShippingAddress(addr.id);
                               setFeedback({ ok: res.ok, text: res.message });
                             }}
                             className="px-3 py-1.5 rounded-full border border-zinc-200 text-[12px] font-medium text-zinc-700 hover:border-zinc-900 transition-colors"
@@ -895,9 +896,9 @@ export const CustomerAccountPage: React.FC = () => {
         confirmLabel="Xóa địa chỉ"
         variant="danger"
         onCancel={() => setDeletingAddress(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (deletingAddress) {
-            const res = deleteShippingAddress(deletingAddress.id);
+            const res = await deleteShippingAddress(deletingAddress.id);
             setFeedback({ ok: res.ok, text: res.message });
             setDeletingAddress(null);
           }

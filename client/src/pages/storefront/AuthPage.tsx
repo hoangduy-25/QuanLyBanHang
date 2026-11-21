@@ -10,10 +10,9 @@ import {
   Phone,
   ShieldQuestion,
   KeyRound,
-  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { IS_DEMO_MODE, ROLE_LABELS } from '../../utils/formatters';
+import { ROLE_LABELS } from '../../utils/formatters';
 
 type AuthMode = 'LOGIN' | 'REGISTER' | 'FORGOT';
 
@@ -28,7 +27,6 @@ const PRESET_QUESTIONS = [
 export const AuthPage: React.FC = () => {
   const {
     currentUser,
-    users,
     loginUser,
     registerUser,
     logoutUser,
@@ -39,10 +37,11 @@ export const AuthPage: React.FC = () => {
 
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Login state (UC-02)
-  const [loginId, setLoginId] = useState('customer@hcshop.dev');
-  const [loginPassword, setLoginPassword] = useState('123456');
+  const [loginId, setLoginId] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Register state (UC-01)
   const [regName, setRegName] = useState('');
@@ -75,67 +74,90 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = loginUser(loginId, loginPassword);
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok && res.user) {
-      setTimeout(() => {
-        if (res.user?.role === 'QuanLy') {
-          navigate('/portal');
-        } else if (res.user?.role === 'NhanVien') {
-          navigate('/portal/orders');
-        } else {
-          navigate('/');
-        }
-      }, 600);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await loginUser(loginId, loginPassword);
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.ok && res.user) {
+        setTimeout(() => {
+          if (res.user?.role === 'QuanLy') {
+            navigate('/portal');
+          } else if (res.user?.role === 'NhanVien') {
+            navigate('/portal/orders');
+          } else {
+            navigate('/');
+          }
+        }, 450);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = registerUser({
-      fullName: regName,
-      email: regEmail,
-      phone: regPhone,
-      password: regPassword,
-      confirmPassword: regConfirm,
-      securityQuestion: regQuestion,
-      securityAnswer: regAnswer,
-    });
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setTimeout(() => navigate('/'), 700);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await registerUser({
+        fullName: regName,
+        email: regEmail,
+        phone: regPhone,
+        password: regPassword,
+        confirmPassword: regConfirm,
+        securityQuestion: regQuestion,
+        securityAnswer: regAnswer,
+      });
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.ok) {
+        setTimeout(() => navigate('/'), 600);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleLookupRecovery = (e: React.FormEvent) => {
+  const handleLookupRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = lookupUserForRecovery(recoveryIdentifier);
-    setFeedback({ ok: res.ok, text: res.message });
-    setRecoveryLockedOut(Boolean(res.isLockedOut));
-    if (res.ok && res.user && res.securityQuestion) {
-      setRecoveryUserId(res.user.id);
-      setRecoveryQuestion(res.securityQuestion);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await lookupUserForRecovery(recoveryIdentifier);
+      setFeedback({ ok: res.ok, text: res.message });
+      setRecoveryLockedOut(Boolean(res.isLockedOut));
+      if (res.ok && res.accountIdentifier && res.securityQuestion) {
+        setRecoveryUserId(res.accountIdentifier);
+        setRecoveryQuestion(res.securityQuestion);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryUserId) return;
-    const res = resetPasswordBySecurityAnswer({
-      userId: recoveryUserId,
-      answer: recoveryAnswer,
-      newPassword: recoveryNewPassword,
-      confirmPassword: recoveryConfirmPassword,
-    });
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.isLockedOut) {
-      setRecoveryLockedOut(true);
-    }
-    if (res.ok) {
-      setRecoveryLockedOut(false);
-      setTimeout(() => navigate('/account'), 800);
+    if (!recoveryUserId || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await resetPasswordBySecurityAnswer({
+        accountIdentifier: recoveryUserId,
+        answer: recoveryAnswer,
+        newPassword: recoveryNewPassword,
+        confirmPassword: recoveryConfirmPassword,
+      });
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.isLockedOut) {
+        setRecoveryLockedOut(true);
+      }
+      if (res.ok) {
+        setRecoveryLockedOut(false);
+        setTimeout(() => switchMode('LOGIN'), 800);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -554,82 +576,10 @@ export const AuthPage: React.FC = () => {
               </div>
             ) : (
               <p className="text-[13px] text-zinc-500">
-                Bạn đang ở chế độ <strong>Khách vãng lai (Guest)</strong>. Hãy đăng nhập bên trái
-                {IS_DEMO_MODE ? ' hoặc chọn nhanh tài khoản mẫu bên dưới.' : '.'}
+                Bạn đang ở chế độ <strong>Khách vãng lai (Guest)</strong>. Hãy đăng nhập bằng tài khoản SQL Server ở biểu mẫu bên trái.
               </p>
             )}
           </div>
-
-          {/* Quick-Fill Test Accounts (gated by VITE_DEMO_MODE) */}
-          {IS_DEMO_MODE && (
-            <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 space-y-3.5">
-              <div className="flex items-center gap-2 text-[13px] font-bold text-zinc-900">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <span>Tài khoản mẫu (Chọn nhanh)</span>
-              </div>
-
-              <div className="space-y-2">
-                {users.map((u) => (
-                  <div
-                    key={u.id}
-                    className="p-3 rounded-2xl bg-[#f8f9fa] border border-zinc-200/60 flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[13px] font-semibold text-zinc-900 truncate">
-                          {u.fullName}
-                        </span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-200/70 text-zinc-700">
-                          {ROLE_LABELS[u.role]}
-                        </span>
-                        {u.isLocked && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                            Đã khóa
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-zinc-500 truncate mt-0.5">
-                        {u.email} • MK: <code className="text-zinc-800">{u.passwordHash}</code>
-                        {u.securityAnswerHash && (
-                          <>
-                            {' '}
-                            • Đáp án BM: <code className="text-blue-700">{u.securityAnswerHash}</code>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          switchMode('LOGIN');
-                          setLoginId(u.email);
-                          setLoginPassword(u.passwordHash);
-                        }}
-                        className="px-2.5 py-1 rounded-full bg-white border border-zinc-200 hover:border-zinc-900 text-[11px] font-medium text-zinc-800 transition-colors"
-                      >
-                        Chọn
-                      </button>
-                      {u.securityQuestion && (
-                        <button
-                          type="button"
-                          title="Khôi phục mật khẩu"
-                          onClick={() => {
-                            switchMode('FORGOT');
-                            setRecoveryIdentifier(u.email);
-                          }}
-                          className="p-1.5 rounded-full bg-white border border-zinc-200 hover:border-blue-600 text-blue-600"
-                        >
-                          <KeyRound className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

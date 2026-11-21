@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -29,12 +29,19 @@ export const ProductDetailPage: React.FC = () => {
     orders,
     reviews,
     wishlistProductIds,
+    loadProductDetail,
     addToCart,
     toggleWishlist,
     submitReview,
     deleteReview,
     toggleReviewLike,
   } = useApp();
+
+  useEffect(() => {
+    if (id) {
+      void loadProductDetail(id);
+    }
+  }, [id, loadProductDetail]);
 
   const product = products.find((p) => p.id === id && p.isVisible && !p.isDeleted);
 
@@ -174,9 +181,9 @@ export const ProductDetailPage: React.FC = () => {
     setIsWritingReview(true);
   };
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = submitReview(
+    const res = await submitReview(
       product.id,
       ratingInput,
       commentInput,
@@ -191,8 +198,8 @@ export const ProductDetailPage: React.FC = () => {
     showToast(res.message);
   };
 
-  const handleConfirmDelete = (reviewId: string) => {
-    const res = deleteReview(reviewId);
+  const handleConfirmDelete = async (reviewId: string) => {
+    const res = await deleteReview(reviewId);
     setConfirmDeleteReviewId(null);
     showToast(res.message);
   };
@@ -226,8 +233,8 @@ export const ProductDetailPage: React.FC = () => {
               className="w-full h-full object-cover"
             />
             <button
-              onClick={() => {
-                const res = toggleWishlist(product.id);
+              onClick={async () => {
+                const res = await toggleWishlist(product.id);
                 showToast(res.message);
               }}
               className={`absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm ${
@@ -309,8 +316,8 @@ export const ProductDetailPage: React.FC = () => {
 
             <button
               disabled={isOutOfStock}
-              onClick={() => {
-                const res = addToCart(product.id, quantity);
+              onClick={async () => {
+                const res = await addToCart(product.id, quantity);
                 showToast(res.message);
               }}
               className={`flex-1 h-10 px-5 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors ${
@@ -462,11 +469,12 @@ export const ProductDetailPage: React.FC = () => {
 
             <ImageUploadField
               multiple
+              uploadFolder="reviews"
               label="Hình ảnh thực tế (tùy chọn)"
               values={reviewImages}
               onChange={setReviewImages}
-              maxFiles={4}
-              helperText="Tối đa 4 ảnh (.JPG, .PNG, .WEBP, mỗi ảnh ≤ 5MB)"
+              maxFiles={1}
+              helperText="Tối đa 1 ảnh (.JPG, .PNG, .WEBP, ≤ 5MB)"
             />
 
             {reviewError && (
@@ -552,8 +560,8 @@ export const ProductDetailPage: React.FC = () => {
                     {/* Like / Edit / Delete Actions (UC-54, UC-55, UC-56) */}
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => {
-                          const res = toggleReviewLike(rev.id);
+                        onClick={async () => {
+                          const res = await toggleReviewLike(rev.id);
                           showToast(res.message);
                         }}
                         className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[11px] font-medium transition-colors ${

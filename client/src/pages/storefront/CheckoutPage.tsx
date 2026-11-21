@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -46,6 +46,12 @@ export const CheckoutPage: React.FC = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<string>(
     defaultAddr?.id || ''
   );
+
+  useEffect(() => {
+    if (!selectedAddressId && defaultAddr?.id) {
+      setSelectedAddressId(defaultAddr.id);
+    }
+  }, [selectedAddressId, defaultAddr?.id]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('KhiNhanHang');
 
   // Voucher state (UC-35)
@@ -136,12 +142,29 @@ export const CheckoutPage: React.FC = () => {
     );
   }, [availableCartItems]);
 
-  const discountResult = useMemo(() => {
-    if (!appliedVoucherCode) return { ok: false, discountAmount: 0, message: '' };
-    return validateVoucherCode(appliedVoucherCode, subtotal);
-  }, [appliedVoucherCode, subtotal, validateVoucherCode]);
+  const [appliedDiscountAmount, setAppliedDiscountAmount] = useState<number>(0);
 
-  const discountAmount = discountResult.ok ? discountResult.discountAmount : 0;
+  useEffect(() => {
+    if (!appliedVoucherCode || subtotal <= 0) {
+      setAppliedDiscountAmount(0);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const res = await validateVoucherCode(appliedVoucherCode, subtotal);
+      if (cancelled) return;
+      if (res.ok) {
+        setAppliedDiscountAmount(res.discountAmount);
+      } else {
+        setAppliedDiscountAmount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedVoucherCode, subtotal]);
+
+  const discountAmount = appliedDiscountAmount;
   const totalAmount = Math.max(0, subtotal - discountAmount);
   const isCodDisabled = subtotal > 20000000; // UC-36 1a
 
@@ -238,29 +261,33 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
-  const handleApplyVoucher = (codeToApply?: string) => {
+  const handleApplyVoucher = async (codeToApply?: string) => {
     const targetCode = codeToApply ?? voucherInput;
-    const res = validateVoucherCode(targetCode, subtotal);
-    if (res.ok && res.voucher) {
-      setAppliedVoucherCode(res.voucher.code);
-      setVoucherInput(res.voucher.code);
+    const res = await validateVoucherCode(targetCode, subtotal);
+    if (res.ok) {
+      const finalCode = res.voucher?.code || targetCode.trim().toUpperCase();
+      setAppliedVoucherCode(finalCode);
+      setVoucherInput(finalCode);
+      setAppliedDiscountAmount(res.discountAmount);
       setVoucherFeedback({ ok: true, text: res.message });
     } else {
       setAppliedVoucherCode(undefined);
+      setAppliedDiscountAmount(0);
       setVoucherFeedback({ ok: false, text: res.message });
     }
   };
 
   const handleRemoveVoucher = () => {
     setAppliedVoucherCode(undefined);
+    setAppliedDiscountAmount(0);
     setVoucherInput('');
     setVoucherFeedback(null);
   };
 
-  const handleSaveNewAddress = (e: React.FormEvent) => {
+  const handleSaveNewAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddressError(null);
-    const res = addShippingAddress({
+    const res = await addShippingAddress({
       recipientName,
       phone,
       province,
@@ -283,9 +310,9 @@ export const CheckoutPage: React.FC = () => {
   const effectivePaymentMethod: PaymentMethod =
     isCodDisabled && paymentMethod === 'KhiNhanHang' ? 'ChuyenKhoan' : paymentMethod;
 
-  const executePlaceOrder = (overrideMethod?: PaymentMethod) => {
+  const executePlaceOrder = async (overrideMethod?: PaymentMethod) => {
     setCheckoutError(null);
-    const res = placeOrder({
+    const res = await placeOrder({
       addressId: selectedAddressId,
       paymentMethod: overrideMethod || effectivePaymentMethod,
       voucherCode: appliedVoucherCode,

@@ -1,15 +1,20 @@
 import React, { useRef, useState } from 'react';
-import { AlertCircle, ImagePlus, Trash2 } from 'lucide-react';
+import { AlertCircle, ImagePlus, Loader2, Trash2 } from 'lucide-react';
+import { resolveAssetUrl } from '../../services/apiClient';
+import { uploadApi } from '../../services/hcshopApi';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_EXT_REGEX = /\.(jpe?g|png|webp)$/i;
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
+export type UploadFolder = 'products' | 'categories' | 'avatars' | 'reviews';
+
 interface SingleImageUploadProps {
   multiple?: false;
   label: string;
   value?: string;
-  onChange: (dataUrl: string) => void;
+  onChange: (imageUrl: string) => void;
+  uploadFolder?: UploadFolder;
   helperText?: string;
   previewShape?: 'square' | 'circle';
 }
@@ -18,21 +23,13 @@ interface MultiImageUploadProps {
   multiple: true;
   label: string;
   values: string[];
-  onChange: (dataUrls: string[]) => void;
+  onChange: (imageUrls: string[]) => void;
+  uploadFolder?: UploadFolder;
   maxFiles?: number;
   helperText?: string;
 }
 
 type ImageUploadFieldProps = SingleImageUploadProps | MultiImageUploadProps;
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Không thể đọc tệp hình ảnh.'));
-    reader.readAsDataURL(file);
-  });
-}
 
 function validateImageFile(file: File): string | null {
   const validType =
@@ -50,6 +47,9 @@ function validateImageFile(file: File): string | null {
 export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const folder: UploadFolder = props.uploadFolder || 'products';
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -59,7 +59,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
     setError(null);
 
     if (props.multiple) {
-      const maxFiles = props.maxFiles ?? 4;
+      const maxFiles = props.maxFiles ?? 1;
       const remaining = maxFiles - props.values.length;
       if (remaining <= 0) {
         setError(`Chỉ được đính kèm tối đa ${maxFiles} hình ảnh.`);
@@ -75,11 +75,20 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
         }
       }
 
+      setIsUploading(true);
       try {
-        const urls = await Promise.all(selected.map(readFileAsDataUrl));
-        props.onChange([...props.values, ...urls]);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Lỗi tải hình ảnh.');
+        const uploadedUrls: string[] = [];
+        for (const file of selected) {
+          const res = await uploadApi.uploadImage(file, folder);
+          if (!res.ok || !res.data?.url) {
+            setError(res.message || 'Tải hình ảnh lên máy chủ thất bại.');
+            return;
+          }
+          uploadedUrls.push(res.data.url);
+        }
+        props.onChange([...props.values, ...uploadedUrls]);
+      } finally {
+        setIsUploading(false);
       }
     } else {
       const file = files[0];
@@ -88,17 +97,23 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
         setError(validationErr);
         return;
       }
+
+      setIsUploading(true);
       try {
-        const url = await readFileAsDataUrl(file);
-        props.onChange(url);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Lỗi tải hình ảnh.');
+        const res = await uploadApi.uploadImage(file, folder);
+        if (!res.ok || !res.data?.url) {
+          setError(res.message || 'Tải hình ảnh lên máy chủ thất bại.');
+          return;
+        }
+        props.onChange(res.data.url);
+      } finally {
+        setIsUploading(false);
       }
     }
   };
 
   if (props.multiple) {
-    const maxFiles = props.maxFiles ?? 4;
+    const maxFiles = props.maxFiles ?? 1;
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -117,12 +132,13 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
               className="relative w-16 h-16 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-50 group"
             >
               <img
-                src={img}
+                src={resolveAssetUrl(img)}
                 alt={`Ảnh đính kèm ${idx + 1}`}
                 className="w-full h-full object-cover"
               />
               <button
                 type="button"
+                disabled={isUploading}
                 onClick={() =>
                   props.onChange(props.values.filter((_, i) => i !== idx))
                 }
@@ -137,11 +153,18 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
           {props.values.length < maxFiles && (
             <button
               type="button"
+              disabled={isUploading}
               onClick={() => inputRef.current?.click()}
-              className="w-16 h-16 rounded-xl border border-dashed border-zinc-300 hover:border-zinc-500 bg-[#f8f9fa] hover:bg-zinc-100 flex flex-col items-center justify-center gap-1 text-zinc-500 transition-colors"
+              className="w-16 h-16 rounded-xl border border-dashed border-zinc-300 hover:border-zinc-500 bg-[#f8f9fa] hover:bg-zinc-100 disabled:opacity-50 flex flex-col items-center justify-center gap-1 text-zinc-500 transition-colors"
             >
-              <ImagePlus className="w-4 h-4" />
-              <span className="text-[10px] font-medium">Thêm ảnh</span>
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ImagePlus className="w-4 h-4" />
+              )}
+              <span className="text-[10px] font-medium">
+                {isUploading ? 'Đang tải' : 'Thêm ảnh'}
+              </span>
             </button>
           )}
         </div>
@@ -150,7 +173,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
           ref={inputRef}
           type="file"
           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-          multiple
+          multiple={maxFiles > 1}
           onChange={handleFileChange}
           className="hidden"
         />
@@ -184,7 +207,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
         >
           {props.value ? (
             <img
-              src={props.value}
+              src={resolveAssetUrl(props.value)}
               alt="Xem trước hình ảnh"
               className="w-full h-full object-cover"
             />
@@ -197,14 +220,25 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              disabled={isUploading}
               onClick={() => inputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-xs font-medium text-zinc-800 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 disabled:opacity-50 text-xs font-medium text-zinc-800 transition-colors"
             >
-              <ImagePlus className="w-3.5 h-3.5" />
-              <span>{props.value ? 'Đổi hình ảnh' : 'Tải ảnh lên'}</span>
+              {isUploading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <ImagePlus className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {isUploading
+                  ? 'Đang tải ảnh...'
+                  : props.value
+                  ? 'Đổi hình ảnh'
+                  : 'Tải ảnh lên'}
+              </span>
             </button>
 
-            {props.value && (
+            {props.value && !isUploading && (
               <button
                 type="button"
                 onClick={() => {

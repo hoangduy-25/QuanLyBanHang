@@ -100,17 +100,17 @@ export const ReviewModerationPage: React.FC = () => {
   const getProduct = (productId: string) =>
     products.find((p) => p.id === productId);
 
-  const handleSendReply = (e: React.FormEvent) => {
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeReview) return;
-    const res = replyToReview(activeReview.id, replyDraft);
+    const res = await replyToReview(activeReview.id, replyDraft);
     setFeedback({ ok: res.ok, text: res.message });
   };
 
-  const handleConfirmDelete = (e: React.FormEvent) => {
+  const handleConfirmDelete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!deletingReview) return;
-    const res = adminDeleteReview(deletingReview.id, deleteReason);
+    const res = await adminDeleteReview(deletingReview.id, deleteReason);
     setFeedback({ ok: res.ok, text: res.message });
     if (res.ok) {
       setDeletingReview(null);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Package,
@@ -51,6 +51,7 @@ export const CustomerOrdersPage: React.FC = () => {
     currentUser,
     orders,
     reviews,
+    loadOrderDetail,
     cancelCustomerOrder,
     submitReview,
   } = useApp();
@@ -62,6 +63,12 @@ export const CustomerOrdersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    if (selectedOrderId) {
+      void loadOrderDetail(selectedOrderId);
+    }
+  }, [selectedOrderId, loadOrderDetail]);
 
   const pageSize = 6;
 
@@ -148,12 +155,12 @@ export const CustomerOrdersPage: React.FC = () => {
     );
   }
 
-  const handleConfirmCancel = (e: React.FormEvent) => {
+  const handleConfirmCancel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cancellingOrder) return;
     const finalReason =
       selectedReason === 'Lý do khác' ? customReason.trim() : selectedReason;
-    const res = cancelCustomerOrder(cancellingOrder.id, finalReason);
+    const res = await cancelCustomerOrder(cancellingOrder.id, finalReason);
     setFeedback({ ok: res.ok, text: res.message });
     if (res.ok) {
       setCancellingOrder(null);
@@ -181,10 +188,10 @@ export const CustomerOrdersPage: React.FC = () => {
     setReviewImages(existing?.images || []);
   };
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewingItem) return;
-    const res = submitReview(
+    const res = await submitReview(
       reviewingItem.productId,
       reviewRating,
       reviewComment,
@@ -830,11 +837,12 @@ export const CustomerOrdersPage: React.FC = () => {
 
             <ImageUploadField
               multiple
+              uploadFolder="reviews"
               label="Hình ảnh thực tế (tùy chọn)"
               values={reviewImages}
               onChange={setReviewImages}
-              maxFiles={4}
-              helperText="Tối đa 4 ảnh (.JPG, .PNG, .WEBP, mỗi ảnh ≤ 5MB)"
+              maxFiles={1}
+              helperText="Tối đa 1 ảnh (.JPG, .PNG, .WEBP, ≤ 5MB)"
             />
 
             <div className="flex items-center justify-end gap-2 pt-1">
