@@ -275,6 +275,10 @@
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="images\avatars\README.txt" />
+    <Content Include="images\categories\README.txt" />
+    <Content Include="images\products\README.txt" />
+    <Content Include="images\reviews\README.txt" />
     <Content Include="Scripts\bootstrap.bundle.js" />
     <Content Include="Scripts\bootstrap.bundle.min.js" />
     <Content Include="Scripts\bootstrap.esm.js" />
@@ -304,10 +308,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
-    <Folder Include="images\avatars\" />
-    <Folder Include="images\categories\" />
-    <Folder Include="images\products\" />
-    <Folder Include="images\reviews\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />
