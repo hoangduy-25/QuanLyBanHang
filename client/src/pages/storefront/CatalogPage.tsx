@@ -358,30 +358,31 @@ export const CatalogPage: React.FC = () => {
               const isOutOfStock = product.stock <= 0;
 
               return (
-                <div
-                  key={product.id}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                  className="bg-white rounded-2xl border border-zinc-200/70 overflow-hidden flex flex-col justify-between transition-all hover:border-zinc-300 cursor-pointer group"
-                >
+                  <div
+                      key={product.id}
+                      onClick={() => navigate(`/product/${product.id}`)}
+                      className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-zinc-200/70 bg-white transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
+                  >
                   <div>
                     {/* Placeholder Thumbnail */}
-                    <div className="relative aspect-[5/4] bg-[#f1f5f9] overflow-hidden">
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                      />
-                      <button
-                        onClick={(e) => handleToggleWish(e, product.id)}
-                        className={`absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                          isLiked
-                            ? 'bg-rose-50 text-rose-500'
-                            : 'bg-white text-zinc-700 hover:bg-zinc-50'
-                        }`}
-                        aria-label="Yêu thích"
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-current' : ''}`} />
-                      </button>
+                    <div className="relative flex h-56 items-center justify-center overflow-hidden rounded-t-2xl bg-white">
+                        <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-contain p-2"
+                            loading="lazy"
+                        />
+
+                        <button
+                            onClick={(e) => handleToggleWish(e, product.id)}
+                            className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200/80 shadow-sm transition-colors ${isLiked
+                                    ? 'bg-rose-50 text-rose-500'
+                                    : 'bg-white/95 text-zinc-600 hover:bg-zinc-50'
+                                }`}
+                            aria-label="Yêu thích"
+                        >
+                            <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                        </button>
                     </div>
 
                     {/* Card Content */}

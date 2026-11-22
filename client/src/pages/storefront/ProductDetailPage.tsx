@@ -226,11 +226,12 @@ export const ProductDetailPage: React.FC = () => {
       <div className="bg-white rounded-2xl border border-zinc-200/70 p-6 lg:p-8 grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Left 6 Cols: Placeholder Image */}
         <div className="md:col-span-6">
-          <div className="relative aspect-[5/4] rounded-2xl bg-[#f1f5f9] overflow-hidden border border-zinc-100">
+                  <div className="relative flex h-[360px] items-center justify-center overflow-hidden rounded-2xl border border-zinc-100 bg-white p-4 sm:h-[420px]">
             <img
               src={product.imageUrl}
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="block h-full w-full object-contain"
+              loading="eager"
             />
             <button
               onClick={async () => {
@@ -670,18 +671,19 @@ export const ProductDetailPage: React.FC = () => {
                 setQuantity(1);
                 navigate(`/product/${item.id}`);
               }}
-              className="bg-white rounded-2xl border border-zinc-200/70 overflow-hidden cursor-pointer hover:border-zinc-300 transition-colors"
+                  className="group cursor-pointer overflow-hidden rounded-2xl border border-zinc-200/70 bg-white transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
             >
-              <div className="aspect-[5/4] bg-[#f1f5f9]">
+                  <div className="relative flex h-44 items-center justify-center overflow-hidden rounded-t-2xl bg-white p-2 sm:h-48">
                 <img
                   src={item.imageUrl}
                   alt={item.name}
-                  className="w-full h-full object-cover"
+                  className="block h-full w-full object-contain"
+                  loading="lazy"
                 />
               </div>
-              <div className="p-3.5 space-y-1">
-                <h3 className="text-xs font-bold text-zinc-900">{item.name}</h3>
-                <p className="text-xs font-semibold text-zinc-700">
+                  <div className="space-y-1 border-t border-zinc-100 p-3.5">
+                      <h3 className="line-clamp-2 text-xs font-bold text-zinc-900 transition-colors group-hover:text-blue-600">{item.name}</h3>
+                      <p className="text-xs font-semibold text-zinc-700">
                   {formatVND(item.price)}
                 </p>
               </div>
