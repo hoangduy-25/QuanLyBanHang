@@ -1,12 +1,13 @@
-﻿using System;
-using System.Threading.Tasks;
-using QuanLyBanHang.Models.DTOs.XacThuc;
+﻿using QuanLyBanHang.Models.DTOs.XacThuc;
 using QuanLyBanHang.Models.Entities;
 using QuanLyBanHang.Models.Enums;
 using QuanLyBanHang.Repositories.Interfaces;
 using QuanLyBanHang.Services.Exceptions;
 using QuanLyBanHang.Services.Helpers;
 using QuanLyBanHang.Services.Interfaces;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace QuanLyBanHang.Services.Implementations
 {
@@ -40,7 +41,7 @@ namespace QuanLyBanHang.Services.Implementations
             {
                 HoTen = request.HoTen.Trim(),
                 Email = request.Email.Trim().ToLowerInvariant(),
-                SoDienThoai = request.SoDienThoai.Trim(),
+                SoDienThoai = PasswordHasher.NormalizePhone(request.SoDienThoai),
                 MatKhauHash = PasswordHasher.Hash(request.MatKhau),
                 VaiTro = VaiTro.KhachHang.ToString(),
                 TrangThai = TrangThaiTaiKhoan.HoatDong.ToString(),
@@ -101,8 +102,8 @@ namespace QuanLyBanHang.Services.Implementations
             }
 
             string redirectUrl = "/";
-            if (tk.VaiTro == VaiTro.NhanVien.ToString()) redirectUrl = "/DonHang";
-            else if (tk.VaiTro == VaiTro.QuanLy.ToString()) redirectUrl = "/Admin";
+            if (tk.VaiTro == VaiTro.NhanVien.ToString()) redirectUrl = "/portal/orders";
+            else if (tk.VaiTro == VaiTro.QuanLy.ToString()) redirectUrl = "/portal";
 
             return new DangNhapResponse
             {
@@ -111,7 +112,8 @@ namespace QuanLyBanHang.Services.Implementations
                 Email = tk.Email,
                 VaiTro = tk.VaiTro,
                 RedirectUrl = redirectUrl,
-                ExpiresAt = DateTimeOffset.Now.AddHours(8)
+                ExpiresAt = DateTimeOffset.Now.AddHours(8),
+                PasswordStamp = (tk.MatKhauHash ?? string.Empty).Split('.').LastOrDefault()
             };
         }
 
@@ -122,8 +124,18 @@ namespace QuanLyBanHang.Services.Implementations
                 throw new BadRequestException("Vui lòng nhập email hoặc số điện thoại.");
 
             var tk = await _uow.TaiKhoans.GetByEmailOrPhoneAsync(emailOrPhone);
+
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy tài khoản tương ứng.");
+
+            if (tk.TrangThai == TrangThaiTaiKhoan.BiKhoa.ToString())
+                throw new ForbiddenException("Tài khoản của bạn đang bị khóa. Vui lòng liên hệ cửa hàng để được hỗ trợ.");
+
+            if (tk.KhoaTamDen.HasValue && tk.KhoaTamDen.Value > DateTimeOffset.Now)
+            {
+                var phutConLai = (int)Math.Ceiling((tk.KhoaTamDen.Value - DateTimeOffset.Now).TotalMinutes);
+                throw new ForbiddenException($"Chức năng đang tạm khóa do nhập sai nhiều lần. Vui lòng thử lại sau {phutConLai} phút.");
+            }
 
             if (string.IsNullOrWhiteSpace(tk.CauHoiBaoMat) || string.IsNullOrWhiteSpace(tk.CauTraLoiHash))
                 throw new BadRequestException("Tài khoản chưa thiết lập câu hỏi bảo mật. Vui lòng liên hệ quản lý để được hỗ trợ.");
@@ -142,11 +154,15 @@ namespace QuanLyBanHang.Services.Implementations
                 throw new BadRequestException("Dữ liệu không hợp lệ.");
 
             var tk = await _uow.TaiKhoans.GetByEmailOrPhoneAsync(request.TaiKhoan);
+
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy tài khoản tương ứng.");
 
             if (string.IsNullOrWhiteSpace(tk.CauHoiBaoMat) || string.IsNullOrWhiteSpace(tk.CauTraLoiHash))
                 throw new BadRequestException("Tài khoản chưa thiết lập câu hỏi bảo mật. Vui lòng liên hệ quản lý để được hỗ trợ.");
+
+            if (tk.TrangThai == TrangThaiTaiKhoan.BiKhoa.ToString())
+                throw new ForbiddenException("Tài khoản của bạn đang bị khóa. Vui lòng liên hệ cửa hàng để được hỗ trợ.");
 
             if (tk.KhoaTamDen.HasValue && tk.KhoaTamDen.Value > DateTimeOffset.Now)
                 throw new ForbiddenException("Chức năng khôi phục đang tạm khóa do trả lời sai quá nhiều lần. Vui lòng thử lại sau.");
@@ -177,6 +193,9 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-04: Đổi mật khẩu
         public async Task DoiMatKhauAsync(int taiKhoanId, DoiMatKhauRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu yêu cầu không hợp lệ.");
+
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy tài khoản.");
@@ -197,6 +216,11 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-05: Điền / cập nhật câu hỏi bảo mật
         public async Task CapNhatCauHoiBaoMatAsync(int taiKhoanId, CapNhatCauHoiBaoMatRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu yêu cầu không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(request.CauHoiBaoMat))
+                throw new BadRequestException("Vui lòng chọn câu hỏi bảo mật.");
+
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy tài khoản.");

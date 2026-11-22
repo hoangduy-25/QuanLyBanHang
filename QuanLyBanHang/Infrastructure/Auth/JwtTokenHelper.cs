@@ -25,7 +25,7 @@ namespace QuanLyBanHang.Infrastructure.Auth
             }
         }
 
-        public static string GenerateToken(int taiKhoanId, string hoTen, string email, string vaiTro, DateTimeOffset expiresAt)
+        public static string GenerateToken(int taiKhoanId, string hoTen, string email, string vaiTro, DateTimeOffset expiresAt, string passwordStamp = null)
         {
             var header = new Dictionary<string, object>
             {
@@ -40,7 +40,8 @@ namespace QuanLyBanHang.Infrastructure.Auth
                 { "email", email ?? string.Empty },
                 { "role", vaiTro ?? string.Empty },
                 { "exp", expiresAt.ToUnixTimeSeconds() },
-                { "iat", DateTimeOffset.UtcNow.ToUnixTimeSeconds() }
+                { "iat", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
+                { "pst", passwordStamp ?? string.Empty }
             };
 
             var headerPart = Base64UrlEncode(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(header)));
@@ -59,6 +60,18 @@ namespace QuanLyBanHang.Infrastructure.Auth
             var parts = token.Split('.');
             if (parts.Length != 3)
                 return null;
+
+            try
+            {
+                var headerJson = Encoding.UTF8.GetString(Base64UrlDecode(parts[0]));
+                var header = JsonConvert.DeserializeObject<Dictionary<string, object>>(headerJson);
+                if (header == null || !header.ContainsKey("alg") || Convert.ToString(header["alg"]) != "HS256")
+                    return null;
+            }
+            catch
+            {
+                return null;
+            }
 
             var signingInput = parts[0] + "." + parts[1];
             var expectedSig = ComputeHmacSha256(signingInput, SecretKey);
@@ -81,7 +94,8 @@ namespace QuanLyBanHang.Infrastructure.Auth
                     new Claim(ClaimTypes.NameIdentifier, Convert.ToString(payload["sub"])),
                     new Claim(ClaimTypes.Name, payload.ContainsKey("name") ? Convert.ToString(payload["name"]) : string.Empty),
                     new Claim(ClaimTypes.Email, payload.ContainsKey("email") ? Convert.ToString(payload["email"]) : string.Empty),
-                    new Claim(ClaimTypes.Role, payload.ContainsKey("role") ? Convert.ToString(payload["role"]) : string.Empty)
+                    new Claim(ClaimTypes.Role, payload.ContainsKey("role") ? Convert.ToString(payload["role"]) : string.Empty),
+                    new Claim("pst", payload.ContainsKey("pst") ? Convert.ToString(payload["pst"]) : string.Empty)
                 };
 
                 var identity = new ClaimsIdentity(claims, "Bearer");

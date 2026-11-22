@@ -88,5 +88,14 @@ namespace QuanLyBanHang.Services.Helpers
 
             return diff == 0;
         }
+        public static string NormalizePhone(string phone)
+        {
+            var s = (phone ?? string.Empty).Trim().Replace(" ", "").Replace("-", "");
+            if (s.StartsWith("+84"))
+                s = "0" + s.Substring(3);
+            else if (s.StartsWith("84") && s.Length >= 11)
+                s = "0" + s.Substring(2);
+            return s;
+        }
     }
 }

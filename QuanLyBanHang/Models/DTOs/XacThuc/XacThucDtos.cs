@@ -50,6 +50,8 @@ namespace QuanLyBanHang.Models.DTOs.XacThuc
 
     public class DangNhapResponse
     {
+        [Newtonsoft.Json.JsonIgnore]
+        public string PasswordStamp { get; set; }
         public string AccessToken { get; set; }
         public DateTimeOffset ExpiresAt { get; set; }
         public int TaiKhoanId { get; set; }

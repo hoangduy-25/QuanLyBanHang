@@ -1,11 +1,13 @@
-﻿using System;
+﻿using QuanLyBanHang.Data;
+using QuanLyBanHang.Infrastructure.Auth;
+using QuanLyBanHang.Models.DTOs.Common;
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Web.Http.Controllers;
 using System.Web.Http.Filters;
-using QuanLyBanHang.Infrastructure.Auth;
-using QuanLyBanHang.Models.DTOs.Common;
 
 namespace QuanLyBanHang.Infrastructure.Filters
 {
@@ -27,6 +29,29 @@ namespace QuanLyBanHang.Infrastructure.Filters
                 : null;
 
             var principal = JwtTokenHelper.ValidateToken(token);
+            if (principal != null)
+            {
+                var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var tokenStamp = principal.FindFirst("pst")?.Value;
+                if (int.TryParse(userIdClaim, out var userId))
+                {
+                    using (var db = new QuanLyBanHangDbContext())
+                    {
+                        var userState = db.TaiKhoans
+                            .Where(t => t.Id == userId)
+                            .Select(t => new { t.TrangThai, t.MatKhauHash })
+                            .FirstOrDefault();
+
+                        var currentStamp = (userState?.MatKhauHash ?? string.Empty).Split('.').LastOrDefault();
+                        if (userState == null || userState.TrangThai == "BiKhoa" ||
+                            (!string.IsNullOrEmpty(tokenStamp) && tokenStamp != currentStamp))
+                        {
+                            principal = null;
+                        }
+                    }
+                }
+            }
+
             if (principal != null)
             {
                 actionContext.RequestContext.Principal = principal;

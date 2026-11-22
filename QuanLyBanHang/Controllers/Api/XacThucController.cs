@@ -31,7 +31,8 @@ namespace QuanLyBanHang.Controllers.Api
         public async Task<IHttpActionResult> DangNhap([FromBody] DangNhapRequest request)
         {
             var res = await _service.DangNhapAsync(request);
-            res.AccessToken = JwtTokenHelper.GenerateToken(res.TaiKhoanId, res.HoTen, res.Email, res.VaiTro, res.ExpiresAt);
+            res.AccessToken = JwtTokenHelper.GenerateToken(
+                res.TaiKhoanId, res.HoTen, res.Email, res.VaiTro, res.ExpiresAt, res.PasswordStamp);
             return OkApi(res, "Đăng nhập thành công.");
         }
 

@@ -320,16 +320,16 @@ export const AuthPage: React.FC = () => {
 
                 <div>
                   <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                    Số điện thoại (10 số) *
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      maxLength={10}
-                      value={regPhone}
-                      onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="0988123456"
+                                        Số điện thoại *
+                                    </label>
+                                    <div className="relative">
+                                        <Phone className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                        <input
+                                            type="tel"
+                                            maxLength={15}
+                                            value={regPhone}
+                                            onChange={(e) => setRegPhone(e.target.value)}
+                                            placeholder="VD: 0988123456 hoặc +84988123456"
                       className="w-full h-10 pl-10 pr-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900"
                     />
                   </div>
@@ -356,8 +356,8 @@ export const AuthPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                    Mật khẩu (tối thiểu 6 ký tự) *
-                  </label>
+                                            Mật khẩu (tối thiểu 8 ký tự, có chữ hoa, thường, số) *
+                                        </label>
                   <input
                     type="password"
                     maxLength={128}

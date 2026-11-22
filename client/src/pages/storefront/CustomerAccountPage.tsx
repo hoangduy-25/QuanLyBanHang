@@ -64,6 +64,7 @@ export const CustomerAccountPage: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
   // Security question state (UC-05)
   const [secCurrentPassword, setSecCurrentPassword] = useState('');
@@ -73,6 +74,7 @@ export const CustomerAccountPage: React.FC = () => {
   const [secAnswer, setSecAnswer] = useState(
     currentUser?.securityAnswerHash || ''
   );
+  const [isSubmittingSecurity, setIsSubmittingSecurity] = useState(false);
 
   // Address Modal state (UC-07, ISS-13, ISS-18)
   const [editingAddress, setEditingAddress] = useState<ShippingAddress | null>(null);
@@ -199,29 +201,55 @@ export const CustomerAccountPage: React.FC = () => {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await changePassword({
-      currentPassword,
-      newPassword,
-      confirmPassword,
-    });
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+    if (isSubmittingPassword) return;
+    if (newPassword.length < 8) {
+      setFeedback({ ok: false, text: 'Mật khẩu mới phải có ít nhất 8 ký tự.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setFeedback({ ok: false, text: 'Xác nhận mật khẩu mới không khớp.' });
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setFeedback({ ok: false, text: 'Mật khẩu mới phải khác mật khẩu hiện tại.' });
+      return;
+    }
+
+    setIsSubmittingPassword(true);
+    try {
+      const res = await changePassword({ currentPassword, newPassword, confirmPassword });
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.ok) {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } finally {
+      setIsSubmittingPassword(false);
     }
   };
 
   const handleSecurityQuestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await updateSecurityQuestion({
-      currentPassword: secCurrentPassword,
-      securityQuestion: secQuestion,
-      securityAnswer: secAnswer,
-    });
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setSecCurrentPassword('');
+    if (isSubmittingSecurity) return;
+    if (secAnswer.trim().length < 2) {
+      setFeedback({ ok: false, text: 'Câu trả lời bảo mật phải có ít nhất 2 ký tự.' });
+      return;
+    }
+
+    setIsSubmittingSecurity(true);
+    try {
+      const res = await updateSecurityQuestion({
+        currentPassword: secCurrentPassword,
+        securityQuestion: secQuestion,
+        securityAnswer: secAnswer,
+      });
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.ok) {
+        setSecCurrentPassword('');
+      }
+    } finally {
+      setIsSubmittingSecurity(false);
     }
   };
 
@@ -645,9 +673,10 @@ export const CustomerAccountPage: React.FC = () => {
                 <div>
                   <button
                     type="submit"
-                    className="px-5 h-10 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
+                    disabled={isSubmittingPassword}
+                    className="px-5 h-10 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 disabled:opacity-50"
                   >
-                    Cập nhật mật khẩu
+                    {isSubmittingPassword ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
                   </button>
                 </div>
               </form>
@@ -726,9 +755,10 @@ export const CustomerAccountPage: React.FC = () => {
                 <div>
                   <button
                     type="submit"
-                    className="px-5 h-10 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
+                    disabled={isSubmittingSecurity}
+                    className="px-5 h-10 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 disabled:opacity-50"
                   >
-                    Lưu Câu hỏi bảo mật
+                    {isSubmittingSecurity ? 'Đang lưu...' : 'Lưu Câu hỏi bảo mật'}
                   </button>
                 </div>
               </form>

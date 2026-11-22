@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Entity;
-using System.Linq;
-using System.Threading.Tasks;
-using QuanLyBanHang.Data;
+﻿using QuanLyBanHang.Data;
 using QuanLyBanHang.Models.DTOs.Common;
 using QuanLyBanHang.Models.DTOs.TaiKhoan;
 using QuanLyBanHang.Models.Entities;
 using QuanLyBanHang.Repositories.Interfaces;
+using QuanLyBanHang.Services.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Data.Entity;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace QuanLyBanHang.Repositories.Implementations
 {
@@ -17,9 +18,13 @@ namespace QuanLyBanHang.Repositories.Implementations
 
         public Task<TaiKhoan> GetByEmailOrPhoneAsync(string emailOrPhone)
         {
-            var normalized = (emailOrPhone ?? string.Empty).Trim().ToLower();
+            var raw = (emailOrPhone ?? string.Empty).Trim();
+            var normalizedEmail = raw.ToLower();
+            var normalizedPhone = PasswordHasher.NormalizePhone(raw);
             return DbSet.FirstOrDefaultAsync(t =>
-                t.Email.ToLower() == normalized || t.SoDienThoai == normalized);
+                t.Email.ToLower() == normalizedEmail ||
+                t.SoDienThoai == normalizedPhone ||
+                t.SoDienThoai == raw);
         }
 
         public Task<bool> ExistsEmailAsync(string email, int? excludeId = null)
@@ -31,7 +36,7 @@ namespace QuanLyBanHang.Repositories.Implementations
 
         public Task<bool> ExistsPhoneAsync(string phone, int? excludeId = null)
         {
-            var normalized = (phone ?? string.Empty).Trim();
+            var normalized = PasswordHasher.NormalizePhone(phone);
             return DbSet.AnyAsync(t =>
                 t.SoDienThoai == normalized && (!excludeId.HasValue || t.Id != excludeId.Value));
         }
