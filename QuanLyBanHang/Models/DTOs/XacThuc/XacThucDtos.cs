@@ -16,7 +16,7 @@ namespace QuanLyBanHang.Models.DTOs.XacThuc
         public string Email { get; set; }
 
         [Required(ErrorMessage = "Số điện thoại không được để trống.")]
-        [RegularExpression(@"^(0|\+84)[0-9]{9,10}$", ErrorMessage = "Số điện thoại không đúng định dạng Việt Nam.")]
+        [RegularExpression(@"^(\+?84|0)[0-9\s\-]{9,13}$", ErrorMessage = "Số điện thoại không đúng định dạng Việt Nam.")]
         [StringLength(20)]
         public string SoDienThoai { get; set; }
 

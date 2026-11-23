@@ -949,7 +949,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       soDienThoai: params.phone.trim(),
       ngaySinh: params.dob || null,
       gioiTinh: params.gender || null,
-      anhDaiDien: stripBaseUrlForSave(params.avatar),
+      anhDaiDien: params.avatar === '' ? '' : stripBaseUrlForSave(params.avatar),
     });
     if (!res.ok) return { ok: false, message: res.message };
     if (res.data) {
@@ -1459,6 +1459,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (accRes.ok && accRes.data) {
       setUsers(accRes.data.items.map(mapTaiKhoanItemToUser));
     }
+
+    await loadAccountLockHistory(userId);
 
     const warning = res.data?.canhBao ? ` ${res.data.canhBao}` : '';
     return { ok: true, message: `${res.message}${warning}` };

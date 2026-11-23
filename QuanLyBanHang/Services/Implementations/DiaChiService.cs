@@ -7,6 +7,7 @@ using QuanLyBanHang.Models.Entities;
 using QuanLyBanHang.Repositories.Interfaces;
 using QuanLyBanHang.Services.Exceptions;
 using QuanLyBanHang.Services.Interfaces;
+using QuanLyBanHang.Services.Helpers;
 
 namespace QuanLyBanHang.Services.Implementations
 {
@@ -28,6 +29,8 @@ namespace QuanLyBanHang.Services.Implementations
 
         public async Task<DiaChiResponse> ThemDiaChiAsync(int taiKhoanId, TaoSuaDiaChiRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu địa chỉ không hợp lệ.");
             var count = await _uow.DiaChis.CountByTaiKhoanAsync(taiKhoanId);
             if (count >= MaxAddressesPerUser)
                 throw new BadRequestException(string.Format("Bạn chỉ được lưu tối đa {0} địa chỉ nhận hàng.", MaxAddressesPerUser));
@@ -53,7 +56,7 @@ namespace QuanLyBanHang.Services.Implementations
                 {
                     TaiKhoanId = taiKhoanId,
                     TenNguoiNhan = request.TenNguoiNhan.Trim(),
-                    SoDienThoai = request.SoDienThoai.Trim(),
+                    SoDienThoai = PasswordHasher.NormalizePhone(request.SoDienThoai),
                     TinhThanh = request.TinhThanh.Trim(),
                     QuanHuyen = request.QuanHuyen.Trim(),
                     PhuongXa = request.PhuongXa.Trim(),
@@ -76,6 +79,8 @@ namespace QuanLyBanHang.Services.Implementations
 
         public async Task<DiaChiResponse> SuaDiaChiAsync(int taiKhoanId, int diaChiId, TaoSuaDiaChiRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu địa chỉ không hợp lệ.");
             var entity = await _uow.DiaChis.GetByIdAndOwnerAsync(diaChiId, taiKhoanId);
             if (entity == null)
                 throw new NotFoundException("Không tìm thấy địa chỉ nhận hàng.");
@@ -95,7 +100,7 @@ namespace QuanLyBanHang.Services.Implementations
                 }
 
                 entity.TenNguoiNhan = request.TenNguoiNhan.Trim();
-                entity.SoDienThoai = request.SoDienThoai.Trim();
+                entity.SoDienThoai = PasswordHasher.NormalizePhone(request.SoDienThoai);
                 entity.TinhThanh = request.TinhThanh.Trim();
                 entity.QuanHuyen = request.QuanHuyen.Trim();
                 entity.PhuongXa = request.PhuongXa.Trim();

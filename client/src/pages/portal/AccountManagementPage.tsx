@@ -57,6 +57,7 @@ export const AccountManagementPage: React.FC = () => {
   const [lockingUser, setLockingUser] = useState<User | null>(null);
   const [selectedReason, setSelectedReason] = useState(LOCK_REASONS[0]);
   const [customReason, setCustomReason] = useState('');
+  const [isSubmittingLock, setIsSubmittingLock] = useState(false);
 
   // Lock History Modal State (UC-10, ISS-20)
   const [historyUser, setHistoryUser] = useState<User | null>(null);
@@ -110,22 +111,32 @@ export const AccountManagementPage: React.FC = () => {
     return accountLockHistories.filter((h) => h.userId === historyUser.id);
   }, [historyUser, accountLockHistories]);
 
-  useEffect(() => {
-    if (historyUser) {
-      void loadAccountLockHistory(historyUser.id);
+useEffect(() => {
+    const targetId = historyUser?.id || detailUser?.id;
+    if (targetId) {
+      void loadAccountLockHistory(targetId);
     }
-  }, [historyUser, loadAccountLockHistory]);
+  }, [historyUser, detailUser, loadAccountLockHistory]);
 
   const handleConfirmLock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!lockingUser) return;
+    if (!lockingUser || isSubmittingLock) return;
     const reason =
       selectedReason === 'Lý do khác' ? customReason.trim() : selectedReason;
-    const res = await toggleAccountLock(lockingUser.id, reason);
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setLockingUser(null);
-      setCustomReason('');
+    if (reason.length < 3) {
+      setFeedback({ ok: false, text: 'Vui lòng nhập lý do khóa tối thiểu 3 ký tự.' });
+      return;
+    }
+    setIsSubmittingLock(true);
+    try {
+      const res = await toggleAccountLock(lockingUser.id, reason);
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.ok) {
+        setLockingUser(null);
+        setCustomReason('');
+      }
+    } finally {
+      setIsSubmittingLock(false);
     }
   };
 
@@ -614,9 +625,10 @@ export const AccountManagementPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold"
+                disabled={isSubmittingLock}
+                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Xác nhận khóa
+                {isSubmittingLock ? 'Đang xử lý...' : 'Xác nhận khóa'}
               </button>
             </div>
           </form>

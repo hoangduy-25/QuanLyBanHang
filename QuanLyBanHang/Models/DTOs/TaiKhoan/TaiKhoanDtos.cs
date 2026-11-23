@@ -30,7 +30,7 @@ namespace QuanLyBanHang.Models.DTOs.TaiKhoan
         public string HoTen { get; set; }
 
         [Required(ErrorMessage = "Số điện thoại không được để trống.")]
-        [RegularExpression(@"^(0|\+84)[0-9]{9,10}$", ErrorMessage = "Số điện thoại không đúng định dạng.")]
+        [RegularExpression(@"^(\+?84|0)[0-9\s\-]{9,13}$", ErrorMessage = "Số điện thoại không đúng định dạng.")]
         [StringLength(20)]
         public string SoDienThoai { get; set; }
 
@@ -61,6 +61,10 @@ namespace QuanLyBanHang.Models.DTOs.TaiKhoan
         public string VaiTro { get; set; }
         public string TrangThai { get; set; }
         public string LyDoKhoa { get; set; }
+        public DateTime? NgaySinh { get; set; }
+        public string GioiTinh { get; set; }
+        public string AnhDaiDien { get; set; }
+        public bool DaThietLapCauHoiBaoMat { get; set; }
         public DateTimeOffset NgayTao { get; set; }
     }
 

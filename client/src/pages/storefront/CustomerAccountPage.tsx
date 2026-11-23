@@ -54,11 +54,14 @@ export const CustomerAccountPage: React.FC = () => {
   // Profile form state (UC-06, ISS-03)
   const [fullName, setFullName] = useState(currentUser?.fullName || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [dob, setDob] = useState(currentUser?.dob || '2005-05-19');
+  const [dob, setDob] = useState(currentUser?.dob || '');
   const [gender, setGender] = useState<Gender>(
     currentUser?.gender || 'Nam'
   );
   const [avatar, setAvatar] = useState(currentUser?.avatar || '');
+
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  const [isSubmittingAddress, setIsSubmittingAddress] = useState(false);
 
   // Password form state (UC-04)
   const [currentPassword, setCurrentPassword] = useState('');
@@ -87,6 +90,7 @@ export const CustomerAccountPage: React.FC = () => {
   const [addrWard, setAddrWard] = useState('Phường Tràng Tiền');
   const [addrDetail, setAddrDetail] = useState('');
   const [addrIsDefault, setAddrIsDefault] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
 
   const availableDistricts = getDistrictsByProvince(addrProvince);
   const availableWards = getWardsByDistrict(addrProvince, addrDistrict);
@@ -109,7 +113,7 @@ export const CustomerAccountPage: React.FC = () => {
     if (currentUser) {
       setFullName(currentUser.fullName);
       setPhone(currentUser.phone);
-      setDob(currentUser.dob || '2005-05-19');
+      setDob(currentUser.dob || '');
       setGender(currentUser.gender || 'Nam');
       setAvatar(currentUser.avatar || '');
       setSecQuestion(currentUser.securityQuestion || PRESET_QUESTIONS[0]);
@@ -150,6 +154,7 @@ export const CustomerAccountPage: React.FC = () => {
     setAddrWard('Phường Tràng Tiền');
     setAddrDetail('');
     setAddrIsDefault(userAddresses.length === 0);
+    setAddressError(null);
     setShowAddressModal(true);
   };
 
@@ -162,41 +167,69 @@ export const CustomerAccountPage: React.FC = () => {
     setAddrWard(addr.ward);
     setAddrDetail(addr.detailAddress);
     setAddrIsDefault(addr.isDefault);
+    setAddressError(null);
     setShowAddressModal(true);
   };
 
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
-      recipientName: addrRecipient,
-      phone: addrPhone,
-      province: addrProvince,
-      district: addrDistrict,
-      ward: addrWard,
-      detailAddress: addrDetail,
-      isDefault: addrIsDefault,
-    };
+    if (isSubmittingAddress) return;
 
-    const res = editingAddress
-      ? await updateShippingAddress(editingAddress.id, payload)
-      : await addShippingAddress(payload);
+    if (!addrRecipient.trim()) {
+      setAddressError('Vui lòng nhập họ tên người nhận.');
+      return;
+    }
+    if (!addrPhone.trim()) {
+      setAddressError('Vui lòng nhập số điện thoại người nhận.');
+      return;
+    }
+    if (!addrDetail.trim()) {
+      setAddressError('Vui lòng nhập số nhà, tên đường cụ thể.');
+      return;
+    }
 
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setShowAddressModal(false);
+    setAddressError(null);
+    setIsSubmittingAddress(true);
+    try {
+      const payload = {
+        recipientName: addrRecipient,
+        phone: addrPhone,
+        province: addrProvince,
+        district: addrDistrict,
+        ward: addrWard,
+        detailAddress: addrDetail,
+        isDefault: addrIsDefault,
+      };
+      const res = editingAddress
+        ? await updateShippingAddress(editingAddress.id, payload)
+        : await addShippingAddress(payload);
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setShowAddressModal(false);
+      } else {
+        setAddressError(res.message);
+      }
+    } finally {
+      setIsSubmittingAddress(false);
     }
   };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await updateProfile({
-      fullName,
-      phone,
-      dob,
-      gender,
-      avatar: avatar || undefined,
-    });
-    setFeedback({ ok: res.ok, text: res.message });
+    if (isSubmittingProfile) return;
+    setIsSubmittingProfile(true);
+    try {
+      const res = await updateProfile({
+        fullName,
+        phone,
+        dob: dob || undefined,
+        gender,
+        avatar: avatar,
+      });
+      setFeedback({ ok: res.ok, text: res.message });
+    } finally {
+      setIsSubmittingProfile(false);
+    }
   };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -350,32 +383,34 @@ export const CustomerAccountPage: React.FC = () => {
               <span>Thông tin cá nhân</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('ADDRESSES');
-                setFeedback(null);
-              }}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-[13px] font-medium transition-colors ${
-                activeTab === 'ADDRESSES'
-                  ? 'bg-zinc-900 text-white'
-                  : 'text-zinc-600 hover:bg-zinc-100'
-              }`}
-            >
-              <span className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4" />
-                <span>Sổ địa chỉ nhận hàng</span>
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[11px] ${
+            {currentUser.role === 'KhachHang' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ADDRESSES');
+                  setFeedback(null);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-[13px] font-medium transition-colors ${
                   activeTab === 'ADDRESSES'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-zinc-100 text-zinc-600'
+                    ? 'bg-zinc-900 text-white'
+                    : 'text-zinc-600 hover:bg-zinc-100'
                 }`}
               >
-                {userAddresses.length}
-              </span>
-            </button>
+                <span className="flex items-center gap-2.5">
+                  <MapPin className="w-4 h-4" />
+                  <span>Sổ địa chỉ nhận hàng</span>
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[11px] ${
+                    activeTab === 'ADDRESSES'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-100 text-zinc-600'
+                  }`}
+                >
+                  {userAddresses.length}
+                </span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -502,9 +537,10 @@ export const CustomerAccountPage: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="px-6 h-11 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
+                  disabled={isSubmittingProfile}
+                  className="px-6 h-11 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50"
                 >
-                  Lưu thay đổi hồ sơ
+                  {isSubmittingProfile ? 'Đang lưu...' : 'Lưu thay đổi hồ sơ'}
                 </button>
               </div>
             </form>
@@ -787,6 +823,13 @@ export const CustomerAccountPage: React.FC = () => {
               </button>
             </div>
 
+            {addressError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[12px] flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{addressError}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
@@ -905,9 +948,10 @@ export const CustomerAccountPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800"
+                disabled={isSubmittingAddress}
+                className="px-5 py-2 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 disabled:opacity-50"
               >
-                Lưu địa chỉ
+                {isSubmittingAddress ? 'Đang lưu...' : 'Lưu địa chỉ'}
               </button>
             </div>
           </form>

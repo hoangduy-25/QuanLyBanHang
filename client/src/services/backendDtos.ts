@@ -112,6 +112,10 @@ export interface TaiKhoanListItemResponseDto {
   vaiTro: UserRole;
   trangThai: AccountStatus;
   lyDoKhoa?: string | null;
+  ngaySinh?: string | null;
+  gioiTinh?: Gender | null;
+  anhDaiDien?: string | null;
+  daThietLapCauHoiBaoMat?: boolean;
   ngayTao: string;
 }
 

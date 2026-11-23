@@ -72,6 +72,10 @@ export function mapTaiKhoanItemToUser(dto: TaiKhoanListItemResponseDto): User {
     role: dto.vaiTro,
     isLocked: dto.trangThai === 'BiKhoa',
     lockReason: dto.lyDoKhoa || undefined,
+    avatar: dto.anhDaiDien ? resolveAssetUrl(dto.anhDaiDien) : undefined,
+    dob: dto.ngaySinh ? dto.ngaySinh.slice(0, 10) : undefined,
+    gender: dto.gioiTinh || undefined,
+    securityQuestion: dto.daThietLapCauHoiBaoMat ? 'Đã thiết lập' : undefined,
     failedLoginAttempts: 0,
     createdAt: dto.ngayTao,
   };

@@ -28,7 +28,7 @@ namespace QuanLyBanHang.Models.DTOs.DiaChi
         public string TenNguoiNhan { get; set; }
 
         [Required(ErrorMessage = "Số điện thoại không được để trống.")]
-        [RegularExpression(@"^(0|\+84)[0-9]{9,10}$", ErrorMessage = "Số điện thoại không đúng định dạng.")]
+        [RegularExpression(@"^(\+?84|0)[0-9\s\-]{9,13}$", ErrorMessage = "Số điện thoại không đúng định dạng.")]
         [StringLength(20)]
         public string SoDienThoai { get; set; }
 

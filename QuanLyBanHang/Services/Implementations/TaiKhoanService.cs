@@ -9,6 +9,7 @@ using QuanLyBanHang.Models.Enums;
 using QuanLyBanHang.Repositories.Interfaces;
 using QuanLyBanHang.Services.Exceptions;
 using QuanLyBanHang.Services.Interfaces;
+using QuanLyBanHang.Services.Helpers;
 
 namespace QuanLyBanHang.Services.Implementations
 {
@@ -34,6 +35,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-06: Cập nhật thông tin cá nhân
         public async Task<HoSoResponse> CapNhatThongTinCaNhanAsync(int taiKhoanId, CapNhatHoSoRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu cập nhật hồ sơ không hợp lệ.");
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy tài khoản.");
@@ -45,11 +48,13 @@ namespace QuanLyBanHang.Services.Implementations
                 throw new BadRequestException("Ngày sinh không được lớn hơn ngày hiện tại.");
 
             tk.HoTen = request.HoTen.Trim();
-            tk.SoDienThoai = request.SoDienThoai.Trim();
+            tk.SoDienThoai = PasswordHasher.NormalizePhone(request.SoDienThoai);
             tk.NgaySinh = request.NgaySinh.HasValue ? request.NgaySinh.Value.Date : (DateTime?)null;
             tk.GioiTinh = string.IsNullOrWhiteSpace(request.GioiTinh) ? null : request.GioiTinh.Trim();
             if (request.AnhDaiDien != null)
-                tk.AnhDaiDien = request.AnhDaiDien.Trim();
+                tk.AnhDaiDien = string.IsNullOrWhiteSpace(request.AnhDaiDien)
+                    ? null
+                    : request.AnhDaiDien.Trim();
 
             await _uow.SaveChangesAsync();
             return MapHoSo(tk);
@@ -73,6 +78,10 @@ namespace QuanLyBanHang.Services.Implementations
                     VaiTro = t.VaiTro,
                     TrangThai = t.TrangThai,
                     LyDoKhoa = t.LyDoKhoa,
+                    NgaySinh = t.NgaySinh,
+                    GioiTinh = t.GioiTinh,
+                    AnhDaiDien = t.AnhDaiDien,
+                    DaThietLapCauHoiBaoMat = !string.IsNullOrWhiteSpace(t.CauHoiBaoMat),
                     NgayTao = t.NgayTao
                 }).ToList()
             };
@@ -87,6 +96,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-10: Khóa tài khoản khách hàng
         public async Task<KhoaMoTaiKhoanResponse> KhoaAsync(int quanLyId, int taiKhoanId, KhoaTaiKhoanRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.LyDo))
+                throw new BadRequestException("Vui lòng nhập lý do khóa tài khoản.");
             var tk = await _uow.TaiKhoans.GetByIdAsync(taiKhoanId);
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy tài khoản.");
