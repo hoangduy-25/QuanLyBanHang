@@ -353,34 +353,35 @@ export const AuthPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
-                  <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                                            Mật khẩu (tối thiểu 8 ký tự, có chữ hoa, thường, số) *
-                                        </label>
-                  <input
-                    type="password"
-                    maxLength={128}
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="••••••"
-                    className="w-full h-10 px-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900"
-                  />
+                    <label className="mb-1 flex min-h-8 items-start text-[12px] font-semibold leading-4 text-zinc-700">
+                        Mật khẩu (tối thiểu 8 ký tự, có chữ hoa, thường, số) *
+                    </label>
+                    <input
+                        type="password"
+                        maxLength={128}
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        placeholder="••••••"
+                        className="h-10 w-full rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] px-3.5 text-[13px] focus:border-zinc-900 focus:bg-white focus:outline-none"
+                    />
                 </div>
+
                 <div>
-                  <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                    Xác nhận mật khẩu *
-                  </label>
-                  <input
-                    type="password"
-                    maxLength={128}
-                    value={regConfirm}
-                    onChange={(e) => setRegConfirm(e.target.value)}
-                    placeholder="••••••"
-                    className="w-full h-10 px-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900"
-                  />
+                    <label className="mb-1 flex min-h-8 items-start text-[12px] font-semibold leading-4 text-zinc-700">
+                        Xác nhận mật khẩu *
+                    </label>
+                    <input
+                        type="password"
+                        maxLength={128}
+                        value={regConfirm}
+                        onChange={(e) => setRegConfirm(e.target.value)}
+                        placeholder="••••••"
+                        className="h-10 w-full rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] px-3.5 text-[13px] focus:border-zinc-900 focus:bg-white focus:outline-none"
+                    />
                 </div>
-              </div>
+            </div>
 
               {/* Required Security Question setup during registration (UC-01) */}
               <div className="p-4 rounded-2xl bg-[#f8f9fa] border border-zinc-200/70 space-y-3">
