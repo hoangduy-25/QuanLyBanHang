@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
-  CheckCircle2,
-  AlertCircle,
-  Lock,
-  Mail,
-  User as UserIcon,
-  Phone,
-  ShieldQuestion,
-  KeyRound,
+    AlertCircle,
+    ArrowLeft,
+    CheckCircle2,
+    Eye,
+    EyeOff,
+    KeyRound,
+    Lock,
+    Mail,
+    Phone,
+    ShieldQuestion,
+    User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ROLE_LABELS } from '../../utils/formatters';
@@ -42,6 +44,7 @@ export const AuthPage: React.FC = () => {
   // Login state (UC-02)
   const [loginId, setLoginId] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Register state (UC-01)
   const [regName, setRegName] = useState('');
@@ -274,18 +277,33 @@ export const AuthPage: React.FC = () => {
                     Quên mật khẩu?
                   </button>
                 </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="password"
-                    required
-                    maxLength={128}
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Nhập mật khẩu..."
-                    className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-900 transition-colors"
-                  />
-                </div>
+                    <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+
+                        <input
+                            type={showLoginPassword ? 'text' : 'password'}
+                            required
+                            maxLength={128}
+                            value={loginPassword}
+                            onChange={(e) => setLoginPassword(e.target.value)}
+                            placeholder="Nhập mật khẩu..."
+                            className="h-11 w-full rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] pl-10 pr-11 text-[13px] text-zinc-900 transition-colors focus:border-zinc-900 focus:bg-white focus:outline-none"
+                        />
+
+                        <button
+                            type="button"
+                            onClick={() => setShowLoginPassword((visible) => !visible)}
+                            aria-label={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                            title={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                            className="absolute right-3.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-200/70 hover:text-zinc-700"
+                        >
+                            {showLoginPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                            ) : (
+                                <Eye className="h-4 w-4" />
+                            )}
+                        </button>
+                    </div>
               </div>
 
               <button
