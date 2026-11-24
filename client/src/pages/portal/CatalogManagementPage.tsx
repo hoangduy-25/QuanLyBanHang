@@ -123,7 +123,18 @@ export const CatalogManagementPage: React.FC = () => {
   }, [filteredCategories, categoryPage]);
 
   const getCategoryName = (catId: string) =>
-    categories.find((c) => c.id === catId)?.name || 'Chưa phân loại';
+        categories.find((c) => c.id === catId)?.name || 'Chưa phân loại';
+
+  const isProductVisibleOnStore = (product: Product): boolean => {
+        const category = categories.find((c) => c.id === product.categoryId);
+
+        return Boolean(
+            product.isVisible &&
+            category &&
+            category.isVisible &&
+            !category.isDeleted
+        );
+  };
 
   const openCreateProduct = () => {
     setEditingProduct(null);
@@ -369,12 +380,19 @@ export const CatalogManagementPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 text-xs">
-                  {paginatedProducts.map((product) => {
-                    const inOrders = orders.some((o) =>
-                      o.items.some((i) => i.productId === product.id)
-                    );
+                    {paginatedProducts.map((product) => {
+                        const inOrders = orders.some((o) =>
+                            o.items.some((i) => i.productId === product.id)
+                        );
 
-                    return (
+                        const category = categories.find((c) => c.id === product.categoryId);
+                        const isVisibleOnStore = isProductVisibleOnStore(product);
+                        const isHiddenByCategory =
+                            product.isVisible &&
+                            Boolean(category) &&
+                            (!category?.isVisible || category?.isDeleted);
+
+                        return (
                       <tr
                         key={product.id}
                         className="hover:bg-zinc-50/70 transition-colors"
@@ -418,38 +436,46 @@ export const CatalogManagementPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                              product.isVisible
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                                : 'bg-zinc-100 text-zinc-500'
-                            }`}
-                          >
-                            {product.isVisible ? 'Đang bán' : 'Tạm ẩn'}
-                          </span>
+                            <span
+                                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${isVisibleOnStore
+                                        ? 'border-emerald-200/60 bg-emerald-50 text-emerald-700'
+                                        : isHiddenByCategory
+                                            ? 'border-amber-200/60 bg-amber-50 text-amber-700'
+                                            : 'border-zinc-200/60 bg-zinc-100 text-zinc-500'
+                                    }`}
+                            >
+                                {isVisibleOnStore
+                                    ? 'Đang bán'
+                                    : isHiddenByCategory
+                                        ? 'Ẩn theo danh mục'
+                                        : 'Tạm ẩn'}
+                            </span>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="inline-flex items-center gap-1.5">
                             <button
-                              type="button"
-                              onClick={() =>
-                                setConfirmAction({
-                                  type: 'TOGGLE_PRODUCT',
-                                  product,
-                                })
-                              }
-                              title={
-                                product.isVisible
-                                  ? 'Tạm ẩn sản phẩm'
-                                  : 'Mở bán lại'
-                              }
-                              className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
+                                type="button"
+                                disabled={isHiddenByCategory}
+                                onClick={() =>
+                                    setConfirmAction({
+                                        type: 'TOGGLE_PRODUCT',
+                                        product,
+                                    })
+                                }
+                                title={
+                                    isHiddenByCategory
+                                        ? 'Hãy hiển thị danh mục trước khi thay đổi trạng thái sản phẩm'
+                                        : product.isVisible
+                                            ? 'Tạm ẩn sản phẩm'
+                                            : 'Mở bán lại'
+                                }
+                                className="rounded-lg bg-zinc-100 p-1.5 text-zinc-700 hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              {product.isVisible ? (
-                                <EyeOff className="w-3.5 h-3.5" />
-                              ) : (
-                                <Eye className="w-3.5 h-3.5" />
-                              )}
+                                {product.isVisible ? (
+                                    <EyeOff className="h-3.5 w-3.5" />
+                                ) : (
+                                    <Eye className="h-3.5 w-3.5" />
+                                )}
                             </button>
 
                             <button
