@@ -50,6 +50,8 @@ export const CatalogManagementPage: React.FC = () => {
   const [categoryPage, setCategoryPage] = useState(1);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState<CatalogConfirmAction | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const productPageSize = 8;
   const categoryPageSize = 6;
@@ -137,6 +139,7 @@ export const CatalogManagementPage: React.FC = () => {
   };
 
   const openCreateProduct = () => {
+    setModalError(null);
     setEditingProduct(null);
     const nextNum = String(products.length + 1).padStart(2, '0');
     setPrdCode(`SKU-${nextNum}`);
@@ -152,13 +155,18 @@ export const CatalogManagementPage: React.FC = () => {
   };
 
   const openEditProduct = async (prd: Product) => {
+    setModalError(null);
     setEditingProduct(prd);
     setPrdCode(prd.code);
     setPrdName(prd.name);
     setPrdCategoryId(prd.categoryId);
     setPrdPrice(String(prd.price));
     setPrdDescription(prd.description);
-    setPrdImageUrl(prd.imageUrl || '');
+    setPrdImageUrl(
+      prd.imageUrl && !prd.imageUrl.startsWith('data:image/svg+xml')
+        ? prd.imageUrl
+        : ''
+    );
     setShowProductModal(true);
     const detail = await loadProductDetail(prd.id);
     if (detail) {
@@ -168,35 +176,82 @@ export const CatalogManagementPage: React.FC = () => {
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setModalError(null);
+
+    const codeTrimmed = prdCode.trim();
+    const nameTrimmed = prdName.trim();
+    const descTrimmed = prdDescription.trim();
     const priceNum = Number(prdPrice);
+    const stockNum = Number(prdInitialStock);
+    const thresholdNum = Number(prdMinThreshold);
 
-    const res = editingProduct
-      ? await updateProduct(editingProduct.id, {
-          name: prdName,
-          categoryId: prdCategoryId,
-          price: priceNum,
-          description: prdDescription,
-          imageUrl: prdImageUrl || undefined,
-        })
-      : await createProduct({
-          code: prdCode,
-          name: prdName,
-          categoryId: prdCategoryId,
-          price: priceNum,
-          description: prdDescription,
-          imageUrl: prdImageUrl || undefined,
-          initialStock: Number(prdInitialStock),
-          minStockThreshold: Number(prdMinThreshold),
-          isVisible: prdIsVisibleOnCreate,
-        });
+    if (!editingProduct && !codeTrimmed) {
+      setModalError('Vui lòng nhập mã sản phẩm (SKU).');
+      return;
+    }
+    if (!nameTrimmed) {
+      setModalError('Vui lòng nhập tên sản phẩm.');
+      return;
+    }
+    if (!prdCategoryId) {
+      setModalError('Vui lòng chọn danh mục sản phẩm.');
+      return;
+    }
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      setModalError('Giá bán phải là số lớn hơn 0.');
+      return;
+    }
+    if (!editingProduct) {
+      if (!Number.isInteger(stockNum) || stockNum < 0) {
+        setModalError('Tồn kho khởi tạo phải là số nguyên từ 0 trở lên.');
+        return;
+      }
+      if (!Number.isInteger(thresholdNum) || thresholdNum < 0) {
+        setModalError('Ngưỡng cảnh báo sắp hết phải là số nguyên từ 0 trở lên.');
+        return;
+      }
+    }
+    if (!descTrimmed) {
+      setModalError('Vui lòng nhập mô tả sản phẩm.');
+      return;
+    }
 
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setShowProductModal(false);
+    setIsSubmitting(true);
+    try {
+      const res = editingProduct
+        ? await updateProduct(editingProduct.id, {
+            name: nameTrimmed,
+            categoryId: prdCategoryId,
+            price: priceNum,
+            description: descTrimmed,
+            imageUrl: prdImageUrl.trim() || undefined,
+          })
+        : await createProduct({
+            code: codeTrimmed,
+            name: nameTrimmed,
+            categoryId: prdCategoryId,
+            price: priceNum,
+            description: descTrimmed,
+            imageUrl: prdImageUrl.trim() || undefined,
+            initialStock: stockNum,
+            minStockThreshold: thresholdNum,
+            isVisible: prdIsVisibleOnCreate,
+          });
+
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setShowProductModal(false);
+      } else {
+        setModalError(res.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const openCreateCategory = () => {
+    setModalError(null);
     setEditingCategory(null);
     setCatName('');
     setCatDescription('');
@@ -206,6 +261,7 @@ export const CatalogManagementPage: React.FC = () => {
   };
 
   const openEditCategory = (cat: Category) => {
+    setModalError(null);
     setEditingCategory(cat);
     setCatName(cat.name);
     setCatDescription(cat.description);
@@ -215,22 +271,38 @@ export const CatalogManagementPage: React.FC = () => {
 
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = editingCategory
-      ? await updateCategory(editingCategory.id, {
-          name: catName,
-          description: catDescription,
-          imageUrl: catImageUrl || undefined,
-        })
-      : await createCategory({
-          name: catName,
-          description: catDescription,
-          imageUrl: catImageUrl || undefined,
-          isVisible: catIsVisibleOnCreate,
-        });
+    if (isSubmitting) return;
+    setModalError(null);
 
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setShowCategoryModal(false);
+    const nameTrimmed = catName.trim();
+    if (!nameTrimmed) {
+      setModalError('Vui lòng nhập tên danh mục.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = editingCategory
+        ? await updateCategory(editingCategory.id, {
+            name: nameTrimmed,
+            description: catDescription.trim(),
+            imageUrl: catImageUrl.trim() || undefined,
+          })
+        : await createCategory({
+            name: nameTrimmed,
+            description: catDescription.trim(),
+            imageUrl: catImageUrl.trim() || undefined,
+            isVisible: catIsVisibleOnCreate,
+          });
+
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setShowCategoryModal(false);
+      } else {
+        setModalError(res.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -646,6 +718,13 @@ export const CatalogManagementPage: React.FC = () => {
               </button>
             </div>
 
+            {modalError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{modalError}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -774,19 +853,23 @@ export const CatalogManagementPage: React.FC = () => {
             )}
 
             <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => setShowProductModal(false)}
-                className="px-4 py-2 rounded-full border border-zinc-200 text-xs font-medium text-zinc-700"
+                className="px-4 py-2 rounded-full border border-zinc-200 text-xs font-medium text-zinc-700 disabled:opacity-50"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Lưu sản phẩm
+                {isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}
               </button>
+              </div>
             </div>
           </form>
         </div>
@@ -811,6 +894,13 @@ export const CatalogManagementPage: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {modalError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{modalError}</span>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -859,19 +949,23 @@ export const CatalogManagementPage: React.FC = () => {
             )}
 
             <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => setShowCategoryModal(false)}
-                className="px-4 py-2 rounded-full border border-zinc-200 text-xs font-medium text-zinc-700"
+                className="px-4 py-2 rounded-full border border-zinc-200 text-xs font-medium text-zinc-700 disabled:opacity-50"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Lưu danh mục
+                {isSubmitting ? 'Đang lưu...' : 'Lưu danh mục'}
               </button>
+            </div>
             </div>
           </form>
         </div>
@@ -924,26 +1018,35 @@ export const CatalogManagementPage: React.FC = () => {
             : 'warning'
         }
         confirmLabel={
-          confirmAction?.type === 'DELETE_PRODUCT' ||
-          confirmAction?.type === 'DELETE_CATEGORY'
+          isSubmitting
+            ? 'Đang xử lý...'
+            : confirmAction?.type === 'DELETE_PRODUCT' ||
+              confirmAction?.type === 'DELETE_CATEGORY'
             ? 'Xác nhận xóa'
             : 'Xác nhận'
         }
-        onCancel={() => setConfirmAction(null)}
+        onCancel={() => {
+          if (!isSubmitting) setConfirmAction(null);
+        }}
         onConfirm={async () => {
-          if (!confirmAction) return;
-          let res: { ok: boolean; message: string };
-          if (confirmAction.type === 'DELETE_PRODUCT') {
-            res = await deleteProduct(confirmAction.product.id);
-          } else if (confirmAction.type === 'TOGGLE_PRODUCT') {
-            res = await toggleProductVisibility(confirmAction.product.id);
-          } else if (confirmAction.type === 'DELETE_CATEGORY') {
-            res = await deleteCategory(confirmAction.category.id);
-          } else {
-            res = await toggleCategoryVisibility(confirmAction.category.id);
+          if (!confirmAction || isSubmitting) return;
+          setIsSubmitting(true);
+          try {
+            let res: { ok: boolean; message: string };
+            if (confirmAction.type === 'DELETE_PRODUCT') {
+              res = await deleteProduct(confirmAction.product.id);
+            } else if (confirmAction.type === 'TOGGLE_PRODUCT') {
+              res = await toggleProductVisibility(confirmAction.product.id);
+            } else if (confirmAction.type === 'DELETE_CATEGORY') {
+              res = await deleteCategory(confirmAction.category.id);
+            } else {
+              res = await toggleCategoryVisibility(confirmAction.category.id);
+            }
+            setFeedback({ ok: res.ok, text: res.message });
+            setConfirmAction(null);
+          } finally {
+            setIsSubmitting(false);
           }
-          setFeedback({ ok: res.ok, text: res.message });
-          setConfirmAction(null);
         }}
       />
     </div>

@@ -53,12 +53,29 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-20: Thêm sản phẩm mới và khởi tạo bản ghi tồn kho ban đầu
         public async Task<SanPhamChiTietResponse> ThemAsync(TaoSanPhamRequest request, int quanLyId)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu sản phẩm không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(request.MaSanPham))
+                throw new BadRequestException("Mã sản phẩm không được để trống.");
+            if (string.IsNullOrWhiteSpace(request.Ten))
+                throw new BadRequestException("Tên sản phẩm không được để trống.");
+            if (request.GiaBan <= 0)
+                throw new BadRequestException("Giá bán phải lớn hơn 0.");
+            if (request.SoLuongBanDau < 0 || request.NguongToiThieu < 0)
+                throw new BadRequestException("Tồn kho ban đầu và ngưỡng cảnh báo không được âm.");
+
+            var maSanPham = request.MaSanPham.Trim();
+            var ten = request.Ten.Trim();
+
             var danhMuc = await _uow.DanhMucs.GetActiveByIdAsync(request.DanhMucId);
             if (danhMuc == null)
                 throw new NotFoundException("Danh mục đã chọn không tồn tại.");
 
-            if (await _uow.SanPhams.ExistsMaSanPhamAsync(request.MaSanPham))
+            if (await _uow.SanPhams.ExistsMaSanPhamAsync(maSanPham))
                 throw new ConflictException("Mã sản phẩm đã tồn tại.");
+
+            if (await _uow.SanPhams.ExistsTenTrongDanhMucAsync(request.DanhMucId, ten))
+                throw new ConflictException("Tên sản phẩm đã tồn tại trong danh mục này.");
 
             _uow.BeginTransaction();
             try
@@ -66,10 +83,10 @@ namespace QuanLyBanHang.Services.Implementations
                 var sp = new SanPham
                 {
                     DanhMucId = request.DanhMucId,
-                    MaSanPham = request.MaSanPham.Trim(),
-                    Ten = request.Ten.Trim(),
-                    MoTa = request.MoTa != null ? request.MoTa.Trim() : string.Empty,
-                    HinhAnh = request.HinhAnh != null ? request.HinhAnh.Trim() : null,
+                    MaSanPham = maSanPham,
+                    Ten = ten,
+                    MoTa = string.IsNullOrWhiteSpace(request.MoTa) ? string.Empty : request.MoTa.Trim(),
+                    HinhAnh = string.IsNullOrWhiteSpace(request.HinhAnh) ? null : request.HinhAnh.Trim(),
                     GiaBan = request.GiaBan,
                     HienThi = request.HienThi,
                     IsDeleted = false,
@@ -119,6 +136,15 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-21: Sửa thông tin sản phẩm (không sửa số lượng tồn kho tại đây)
         public async Task<SanPhamChiTietResponse> SuaAsync(int id, SuaSanPhamRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu cập nhật sản phẩm không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(request.MaSanPham))
+                throw new BadRequestException("Mã sản phẩm không được để trống.");
+            if (string.IsNullOrWhiteSpace(request.Ten))
+                throw new BadRequestException("Tên sản phẩm không được để trống.");
+            if (request.GiaBan <= 0)
+                throw new BadRequestException("Giá bán phải lớn hơn 0.");
+
             var sp = await _uow.SanPhams.GetDetailByIdAsync(id, false);
             if (sp == null)
                 throw new NotFoundException("Sản phẩm không tồn tại hoặc đã bị xóa.");
@@ -127,14 +153,20 @@ namespace QuanLyBanHang.Services.Implementations
             if (danhMuc == null)
                 throw new NotFoundException("Danh mục đã chọn không tồn tại.");
 
-            if (await _uow.SanPhams.ExistsMaSanPhamAsync(request.MaSanPham, id))
+            var maSanPham = request.MaSanPham.Trim();
+            var ten = request.Ten.Trim();
+
+            if (await _uow.SanPhams.ExistsMaSanPhamAsync(maSanPham, id))
                 throw new ConflictException("Mã sản phẩm đã trùng với sản phẩm khác.");
 
+            if (await _uow.SanPhams.ExistsTenTrongDanhMucAsync(request.DanhMucId, ten, id))
+                throw new ConflictException("Tên sản phẩm đã trùng với sản phẩm khác trong cùng danh mục.");
+
             sp.DanhMucId = request.DanhMucId;
-            sp.MaSanPham = request.MaSanPham.Trim();
-            sp.Ten = request.Ten.Trim();
-            sp.MoTa = request.MoTa != null ? request.MoTa.Trim() : string.Empty;
-            sp.HinhAnh = request.HinhAnh != null ? request.HinhAnh.Trim() : null;
+            sp.MaSanPham = maSanPham;
+            sp.Ten = ten;
+            sp.MoTa = string.IsNullOrWhiteSpace(request.MoTa) ? string.Empty : request.MoTa.Trim();
+            sp.HinhAnh = string.IsNullOrWhiteSpace(request.HinhAnh) ? null : request.HinhAnh.Trim();
             sp.GiaBan = request.GiaBan;
             sp.HienThi = request.HienThi;
 
@@ -173,6 +205,9 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-23: Ẩn / Hiện sản phẩm
         public async Task<SanPhamChiTietResponse> AnHienAsync(int id, AnHienSanPhamRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu cập nhật trạng thái hiển thị không hợp lệ.");
+
             var sp = await _uow.SanPhams.GetDetailByIdAsync(id, false);
             if (sp == null)
                 throw new NotFoundException("Sản phẩm không tồn tại.");

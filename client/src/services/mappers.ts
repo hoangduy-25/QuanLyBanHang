@@ -129,7 +129,7 @@ export function mapSanPhamToProduct(
   const detail = dto as SanPhamChiTietResponseDto;
   const imgUrl = dto.hinhAnh
     ? resolveAssetUrl(dto.hinhAnh)
-    : existing?.imageUrl || createPlaceholderImage(dto.ten);
+    : createPlaceholderImage(dto.ten);
 
   return {
     id: String(dto.id),

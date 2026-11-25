@@ -33,14 +33,18 @@ namespace QuanLyBanHang.Services.Implementations
 
         public async Task<DanhMucResponse> ThemAsync(TaoSuaDanhMucRequest request)
         {
-            if (await _uow.DanhMucs.ExistsTenAsync(request.Ten))
+            if (request == null || string.IsNullOrWhiteSpace(request.Ten))
+                throw new BadRequestException("Tên danh mục không được để trống.");
+
+            var ten = request.Ten.Trim();
+            if (await _uow.DanhMucs.ExistsTenAsync(ten))
                 throw new ConflictException("Tên danh mục đã tồn tại.");
 
             var entity = new DanhMuc
             {
-                Ten = request.Ten.Trim(),
-                MoTa = request.MoTa != null ? request.MoTa.Trim() : null,
-                HinhAnh = request.HinhAnh != null ? request.HinhAnh.Trim() : null,
+                Ten = ten,
+                MoTa = string.IsNullOrWhiteSpace(request.MoTa) ? null : request.MoTa.Trim(),
+                HinhAnh = string.IsNullOrWhiteSpace(request.HinhAnh) ? null : request.HinhAnh.Trim(),
                 HienThi = request.HienThi,
                 IsDeleted = false,
                 NgayTao = DateTimeOffset.Now
@@ -53,16 +57,20 @@ namespace QuanLyBanHang.Services.Implementations
 
         public async Task<DanhMucResponse> SuaAsync(int id, TaoSuaDanhMucRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.Ten))
+                throw new BadRequestException("Tên danh mục không được để trống.");
+
             var entity = await _uow.DanhMucs.GetActiveByIdAsync(id);
             if (entity == null)
                 throw new NotFoundException("Danh mục không tồn tại hoặc đã bị xóa.");
 
-            if (await _uow.DanhMucs.ExistsTenAsync(request.Ten, id))
+            var ten = request.Ten.Trim();
+            if (await _uow.DanhMucs.ExistsTenAsync(ten, id))
                 throw new ConflictException("Tên danh mục đã trùng với danh mục khác.");
 
-            entity.Ten = request.Ten.Trim();
-            entity.MoTa = request.MoTa != null ? request.MoTa.Trim() : null;
-            entity.HinhAnh = request.HinhAnh != null ? request.HinhAnh.Trim() : null;
+            entity.Ten = ten;
+            entity.MoTa = string.IsNullOrWhiteSpace(request.MoTa) ? null : request.MoTa.Trim();
+            entity.HinhAnh = string.IsNullOrWhiteSpace(request.HinhAnh) ? null : request.HinhAnh.Trim();
             entity.HienThi = request.HienThi;
 
             await _uow.SaveChangesAsync();
@@ -87,6 +95,9 @@ namespace QuanLyBanHang.Services.Implementations
 
         public async Task<DanhMucResponse> AnHienAsync(int id, AnHienDanhMucRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu cập nhật trạng thái hiển thị không hợp lệ.");
+
             var entity = await _uow.DanhMucs.GetActiveByIdAsync(id);
             if (entity == null)
                 throw new NotFoundException("Danh mục không tồn tại.");
