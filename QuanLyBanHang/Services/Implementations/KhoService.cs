@@ -36,6 +36,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-25: Nhập hàng tăng số lượng tồn kho
         public async Task<TonKhoResponse> NhapTangAsync(int quanLyId, NhapTangKhoRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu nhập kho không hợp lệ.");
             var tk = await _uow.Khos.GetBySanPhamIdAsync(request.SanPhamId);
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy bản ghi tồn kho của sản phẩm.");
@@ -75,6 +77,10 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-26: Điều chỉnh giảm tồn kho
         public async Task<TonKhoResponse> DieuChinhGiamAsync(int quanLyId, DieuChinhGiamKhoRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu điều chỉnh giảm không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(request.LyDo))
+                throw new BadRequestException("Vui lòng nhập lý do điều chỉnh giảm.");
             var tk = await _uow.Khos.GetBySanPhamIdAsync(request.SanPhamId);
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy bản ghi tồn kho của sản phẩm.");
@@ -115,15 +121,21 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-27: Thiết lập ngưỡng tồn kho tối thiểu
         public async Task<TonKhoResponse> DatNguongToiThieuAsync(int tonKhoId, DatNguongToiThieuRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu ngưỡng tối thiểu không hợp lệ.");
+
             var tk = await _uow.Khos.GetByIdAsync(tonKhoId);
             if (tk == null)
                 throw new NotFoundException("Không tìm thấy bản ghi tồn kho.");
 
-            tk.NguongToiThieu = request.NguongToiThieu;
+            var activeTk = await _uow.Khos.GetBySanPhamIdAsync(tk.SanPhamId);
+            if (activeTk == null)
+                throw new NotFoundException("Sản phẩm không tồn tại hoặc đã bị xóa.");
+
+            activeTk.NguongToiThieu = request.NguongToiThieu;
             await _uow.SaveChangesAsync();
 
-            var reloaded = await _uow.Khos.GetBySanPhamIdAsync(tk.SanPhamId);
-            return MapTonKho(reloaded ?? tk);
+            return MapTonKho(activeTk);
         }
 
         // UC-28: Xem lịch sử biến động kho

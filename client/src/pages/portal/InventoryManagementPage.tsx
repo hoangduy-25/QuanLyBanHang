@@ -3,7 +3,6 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Search,
-  AlertTriangle,
   CheckCircle2,
   AlertCircle,
   History,
@@ -58,6 +57,7 @@ const ADJUST_REASONS = [
 
 export const InventoryManagementPage: React.FC = () => {
   const {
+    categories,
     products,
     stockHistories,
     importStock,
@@ -67,7 +67,11 @@ export const InventoryManagementPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<InventoryTab>('STOCK_LIST');
   const [searchQuery, setSearchQuery] = useState('');
-  const [onlyLowStock, setOnlyLowStock] = useState(false);
+  const [stockStatusFilter, setStockStatusFilter] = useState<'ALL' | 'DuHang' | 'SapHet' | 'HetHang'>('ALL');
+  const [stockCategoryFilter, setStockCategoryFilter] = useState<string>('ALL');
+  const [stockSortBy, setStockSortBy] = useState<'STOCK_ASC' | 'STOCK_DESC' | 'NAME_ASC'>('STOCK_ASC');
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [historyTypeFilter, setHistoryTypeFilter] = useState<'ALL' | StockMovementType>('ALL');
   const [historyProductFilter, setHistoryProductFilter] = useState<string>('ALL');
   const [historyDateFrom, setHistoryDateFrom] = useState('');
@@ -114,10 +118,13 @@ export const InventoryManagementPage: React.FC = () => {
   }, [activeProducts]);
 
   const filteredProducts = useMemo(() => {
-    return activeProducts.filter((p) => {
-      if (onlyLowStock && p.stock > p.minStockThreshold) {
+    const list = activeProducts.filter((p) => {
+      if (stockCategoryFilter !== 'ALL' && p.categoryId !== stockCategoryFilter) {
         return false;
       }
+      if (stockStatusFilter === 'HetHang' && p.stock > 0) return false;
+      if (stockStatusFilter === 'SapHet' && !(p.stock > 0 && p.stock <= p.minStockThreshold)) return false;
+      if (stockStatusFilter === 'DuHang' && p.stock <= p.minStockThreshold) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         return (
@@ -127,7 +134,13 @@ export const InventoryManagementPage: React.FC = () => {
       }
       return true;
     });
-  }, [activeProducts, onlyLowStock, searchQuery]);
+
+    return [...list].sort((a, b) => {
+      if (stockSortBy === 'STOCK_DESC') return b.stock - a.stock;
+      if (stockSortBy === 'NAME_ASC') return a.name.localeCompare(b.name, 'vi');
+      return a.stock - b.stock;
+    });
+  }, [activeProducts, stockCategoryFilter, stockStatusFilter, stockSortBy, searchQuery]);
 
   const paginatedProducts = useMemo(() => {
     const start = (stockPage - 1) * stockPageSize;
@@ -183,6 +196,7 @@ export const InventoryManagementPage: React.FC = () => {
 
   const openImportModalFor = (productId?: string) => {
     const targetId = productId || activeProducts[0]?.id || '';
+    setModalError(null);
     setImportProductId(targetId);
     setImportQty('15');
     setImportPrice('');
@@ -192,7 +206,9 @@ export const InventoryManagementPage: React.FC = () => {
   };
 
   const openAdjustModalFor = (productId?: string) => {
-    const targetId = productId || activeProducts[0]?.id || '';
+    const inStockProduct = activeProducts.find((p) => p.stock > 0);
+    const targetId = productId || inStockProduct?.id || activeProducts[0]?.id || '';
+    setModalError(null);
     setAdjustProductId(targetId);
     setAdjustQty('1');
     setAdjustReasonPreset(ADJUST_REASONS[0]);
@@ -202,46 +218,100 @@ export const InventoryManagementPage: React.FC = () => {
 
   const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await importStock({
-      productId: importProductId,
-      quantity: Number(importQty),
-      importPrice: importPrice.trim() ? Number(importPrice) : undefined,
-      supplier: importSupplier.trim() || undefined,
-      note: importNote,
-    });
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setShowImportModal(false);
+    if (isSubmitting) return;
+    const qty = Number(importQty);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      setModalError('Số lượng nhập phải là số nguyên dương (≥ 1).');
+      return;
+    }
+    if (importPrice.trim() && (Number.isNaN(Number(importPrice)) || Number(importPrice) < 0)) {
+      setModalError('Đơn giá nhập không được âm.');
+      return;
+    }
+
+    setModalError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await importStock({
+        productId: importProductId,
+        quantity: qty,
+        importPrice: importPrice.trim() ? Number(importPrice) : undefined,
+        supplier: importSupplier.trim() || undefined,
+        note: importNote,
+      });
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setShowImportModal(false);
+      } else {
+        setModalError(res.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    const qty = Number(adjustQty);
+    const selectedProd = activeProducts.find((p) => p.id === adjustProductId);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      setModalError('Số lượng giảm phải là số nguyên dương (≥ 1).');
+      return;
+    }
+    if (selectedProd && qty > selectedProd.stock) {
+      setModalError(`Số lượng giảm (${qty}) vượt quá tồn kho hiện tại (${selectedProd.stock}).`);
+      return;
+    }
     const finalReason =
       adjustReasonPreset === 'Lý do khác'
         ? adjustCustomReason.trim()
         : adjustReasonPreset;
-    const res = await adjustStockDecrease({
-      productId: adjustProductId,
-      quantityToSubtract: Number(adjustQty),
-      reason: finalReason,
-    });
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setShowAdjustModal(false);
+    if (finalReason.length < 3) {
+      setModalError('Vui lòng nhập lý do điều chỉnh giảm tối thiểu 3 ký tự.');
+      return;
+    }
+
+    setModalError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await adjustStockDecrease({
+        productId: adjustProductId,
+        quantityToSubtract: qty,
+        reason: finalReason,
+      });
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setShowAdjustModal(false);
+      } else {
+        setModalError(res.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleThresholdSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!thresholdProduct) return;
-    const res = await updateMinStockThreshold(
-      thresholdProduct.id,
-      Number(thresholdValue)
-    );
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setThresholdProduct(null);
+    if (!thresholdProduct || isSubmitting) return;
+    const val = Number(thresholdValue);
+    if (!Number.isInteger(val) || val < 0) {
+      setModalError('Ngưỡng tối thiểu phải là số nguyên không âm (≥ 0).');
+      return;
+    }
+
+    setModalError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await updateMinStockThreshold(thresholdProduct.id, val);
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setThresholdProduct(null);
+      } else {
+        setModalError(res.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -384,21 +454,51 @@ export const InventoryManagementPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2.5 flex-1 justify-end">
             {activeTab === 'STOCK_LIST' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setOnlyLowStock((prev) => !prev);
-                  setStockPage(1);
-                }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  onlyLowStock
-                    ? 'bg-amber-50 border-amber-300 text-amber-800'
-                    : 'bg-[#f4f4f5] border-transparent text-zinc-600 hover:text-zinc-900'
-                }`}
-              >
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Chỉ hiện cảnh báo sắp hết</span>
-              </button>
+              <>
+                <select
+                  value={stockStatusFilter}
+                  onChange={(e) => {
+                    setStockStatusFilter(e.target.value as 'ALL' | 'DuHang' | 'SapHet' | 'HetHang');
+                    setStockPage(1);
+                  }}
+                  aria-label="Lọc trạng thái tồn kho"
+                  className="h-9 px-3 rounded-full bg-[#f4f4f5] text-xs font-medium text-zinc-700 focus:outline-none"
+                >
+                  <option value="ALL">Mọi trạng thái</option>
+                  <option value="DuHang">Đủ hàng</option>
+                  <option value="SapHet">Sắp hết hàng</option>
+                  <option value="HetHang">Hết hàng</option>
+                </select>
+
+                <select
+                  value={stockCategoryFilter}
+                  onChange={(e) => {
+                    setStockCategoryFilter(e.target.value);
+                    setStockPage(1);
+                  }}
+                  aria-label="Lọc theo danh mục"
+                  className="h-9 px-3 rounded-full bg-[#f4f4f5] text-xs font-medium text-zinc-700 focus:outline-none max-w-[180px]"
+                >
+                  <option value="ALL">Tất cả danh mục</option>
+                  {categories.filter((c) => !c.isDeleted).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={stockSortBy}
+                  onChange={(e) => {
+                    setStockSortBy(e.target.value as 'STOCK_ASC' | 'STOCK_DESC' | 'NAME_ASC');
+                    setStockPage(1);
+                  }}
+                  aria-label="Sắp xếp tồn kho"
+                  className="h-9 px-3 rounded-full bg-[#f4f4f5] text-xs font-medium text-zinc-700 focus:outline-none"
+                >
+                  <option value="STOCK_ASC">Tồn ít → nhiều</option>
+                  <option value="STOCK_DESC">Tồn nhiều → ít</option>
+                  <option value="NAME_ASC">Tên A → Z</option>
+                </select>
+              </>
             ) : (
               <select
                 value={historyTypeFilter}
@@ -522,6 +622,13 @@ export const InventoryManagementPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 text-xs">
+                {paginatedProducts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-10 text-center text-zinc-400">
+                    Không có dữ liệu tồn kho phù hợp bộ lọc.
+                  </td>
+                </tr>
+              )}
                   {paginatedProducts.map((product) => {
                     const isOut = product.stock === 0;
                     const isLow =
@@ -560,6 +667,7 @@ export const InventoryManagementPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
+                              setModalError(null);
                               setThresholdProduct(product);
                               setThresholdValue(String(product.minStockThreshold));
                             }}
@@ -639,6 +747,13 @@ export const InventoryManagementPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 text-xs">
+                {paginatedHistories.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-zinc-400">
+                    Không có dữ liệu biến động kho phù hợp bộ lọc.
+                  </td>
+                </tr>
+              )}
                   {paginatedHistories.map((h) => {
                     const prd = products.find((p) => p.id === h.productId);
                     const meta = MOVEMENT_META[h.type];
@@ -738,6 +853,13 @@ export const InventoryManagementPage: React.FC = () => {
               </button>
             </div>
 
+            {modalError && (
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{modalError}</span>
+          </div>
+        )}
+
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
                 Sản phẩm nhập kho *
@@ -821,13 +943,15 @@ export const InventoryManagementPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Xác nhận nhập kho
+                {isSubmitting ? 'Đang lưu...' : 'Xác nhận nhập kho'}
               </button>
             </div>
           </form>
         </div>
+        
       )}
 
       {/* Modal 2: Stock-Out Adjustment */}
@@ -849,6 +973,13 @@ export const InventoryManagementPage: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {modalError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{modalError}</span>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -918,13 +1049,15 @@ export const InventoryManagementPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Lưu điều chỉnh
+                {isSubmitting ? 'Đang lưu...' : 'Lưu điều chỉnh'}
               </button>
             </div>
           </form>
         </div>
+        
       )}
 
       {/* Modal 3: Min Threshold Config */}
@@ -946,6 +1079,13 @@ export const InventoryManagementPage: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {modalError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{modalError}</span>
+              </div>
+            )}
 
             <p className="text-xs text-zinc-500">
               Thiết lập định mức cảnh báo cho <strong>{thresholdProduct.name}</strong>. Khi tồn thực tế nhỏ hơn hoặc bằng mức này, hệ thống sẽ bật cảnh báo nhập hàng.
@@ -975,13 +1115,15 @@ export const InventoryManagementPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Lưu cấu hình
+                {isSubmitting ? 'Đang lưu...' : 'Lưu cấu hình'}
               </button>
             </div>
           </form>
         </div>
+        
       )}
     </div>
   );

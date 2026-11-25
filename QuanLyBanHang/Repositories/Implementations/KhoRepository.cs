@@ -18,6 +18,7 @@ namespace QuanLyBanHang.Repositories.Implementations
         {
             return DbSet
                 .Include(tk => tk.SanPham)
+                .Include(tk => tk.SanPham.DanhMuc)
                 .FirstOrDefaultAsync(tk => tk.SanPhamId == sanPhamId && !tk.SanPham.IsDeleted);
         }
 
@@ -88,7 +89,12 @@ namespace QuanLyBanHang.Repositories.Implementations
                 q = q.Where(b => b.ThoiDiem >= query.TuNgay.Value);
 
             if (query.DenNgay.HasValue)
-                q = q.Where(b => b.ThoiDiem <= query.DenNgay.Value);
+            {
+                var denNgay = query.DenNgay.Value;
+                if (denNgay.TimeOfDay == TimeSpan.Zero)
+                    denNgay = denNgay.AddDays(1).AddSeconds(-1);
+                q = q.Where(b => b.ThoiDiem <= denNgay);
+            }
 
             var total = await q.CountAsync();
 

@@ -40,7 +40,12 @@ namespace QuanLyBanHang.Controllers.Api
         public async Task<IHttpActionResult> DieuChinhGiam([FromBody] DieuChinhGiamKhoRequest request)
         {
             var res = await _service.DieuChinhGiamAsync(CurrentUserId.Value, request);
-            return OkApi(res, "Điều chỉnh giảm tồn kho thành công.");
+            var msg = "Điều chỉnh giảm tồn kho thành công.";
+            if (res.SoLuongTon == 0)
+                msg += " Cảnh báo: Sản phẩm đã hết hàng (tồn = 0).";
+            else if (res.SoLuongTon <= res.NguongToiThieu)
+                msg += string.Format(" Cảnh báo: Tồn kho ({0}) đã chạm hoặc thấp hơn ngưỡng tối thiểu ({1}).", res.SoLuongTon, res.NguongToiThieu);
+            return OkApi(res, msg);
         }
 
         // UC-27: PATCH /api/kho/{id}/nguong-toi-thieu
