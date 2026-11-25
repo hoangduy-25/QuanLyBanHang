@@ -32,6 +32,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-30: Thêm sản phẩm vào giỏ hàng
         public async Task<GioHangResponse> ThemSanPhamAsync(int taiKhoanId, ThemVaoGioRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu thêm vào giỏ hàng không hợp lệ.");
             var sp = await _uow.SanPhams.GetDetailByIdAsync(request.SanPhamId, true);
             if (sp == null)
                 throw new NotFoundException("Sản phẩm không khả dụng.");
@@ -78,6 +80,11 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-31: Chỉnh sửa số lượng sản phẩm trong giỏ
         public async Task<GioHangResponse> SuaSoLuongAsync(int taiKhoanId, int sanPhamId, SuaSoLuongGioRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu cập nhật số lượng không hợp lệ.");
+            if (request.SoLuong < 0)
+                throw new BadRequestException("Số lượng sản phẩm không hợp lệ.");
+
             var gh = await _uow.GioHangs.GetByTaiKhoanIdWithDetailsAsync(taiKhoanId);
             if (gh == null)
                 throw new NotFoundException("Giỏ hàng trống.");
@@ -87,7 +94,7 @@ namespace QuanLyBanHang.Services.Implementations
                 throw new NotFoundException("Sản phẩm không có trong giỏ hàng.");
 
             // UC-31 2b: Số lượng bằng 0 -> xóa khỏi giỏ (UC-32)
-            if (request.SoLuong <= 0)
+            if (request.SoLuong == 0)
             {
                 _uow.GioHangs.RemoveChiTiet(item);
                 await _uow.SaveChangesAsync();
@@ -144,7 +151,8 @@ namespace QuanLyBanHang.Services.Implementations
                     HinhAnh = yt.SanPham != null ? yt.SanPham.HinhAnh : null,
                     GiaBan = yt.SanPham != null ? yt.SanPham.GiaBan : 0,
                     ConHang = tonKho != null && tonKho.SoLuongTon > 0,
-                    HienThi = yt.SanPham != null && yt.SanPham.HienThi,
+                    HienThi = yt.SanPham != null && yt.SanPham.HienThi &&
+                              (yt.SanPham.DanhMuc == null || (yt.SanPham.DanhMuc.HienThi && !yt.SanPham.DanhMuc.IsDeleted)),
                     NgayTao = yt.NgayTao
                 };
             }).ToList();

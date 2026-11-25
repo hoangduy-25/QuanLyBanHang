@@ -6,6 +6,7 @@ import { formatVND } from '../../utils/formatters';
 
 export const WishlistPage: React.FC = () => {
   const {
+    currentUser,
     products,
     categories,
     wishlistProductIds,
@@ -14,6 +15,44 @@ export const WishlistPage: React.FC = () => {
   } = useApp();
 
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
+
+  if (!currentUser) {
+    return (
+      <div className="max-w-md mx-auto my-12 bg-white rounded-3xl border border-zinc-200/70 p-8 text-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mx-auto">
+          <Heart className="w-6 h-6" />
+        </div>
+        <h2 className="text-base font-bold text-zinc-900">
+          Vui lòng đăng nhập để xem sản phẩm yêu thích
+        </h2>
+        <p className="text-[13px] text-zinc-500">
+          Đăng nhập bằng tài khoản Khách hàng để lưu và quản lý danh sách sản phẩm yêu thích của bạn.
+        </p>
+        <Link
+          to="/auth"
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
+        >
+          Đi tới trang Đăng nhập
+        </Link>
+      </div>
+    );
+  }
+
+  if (currentUser.role !== 'KhachHang') {
+    return (
+      <div className="max-w-md mx-auto my-12 bg-white rounded-3xl border border-zinc-200/70 p-8 text-center space-y-4">
+        <h2 className="text-base font-bold text-zinc-900">
+          Danh sách yêu thích chỉ dành cho Khách hàng
+        </h2>
+        <Link
+          to="/portal"
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
+        >
+          Về trang quản trị
+        </Link>
+      </div>
+    );
+  }
 
   const wishlistProducts = products.filter((p) =>
     wishlistProductIds.includes(p.id)

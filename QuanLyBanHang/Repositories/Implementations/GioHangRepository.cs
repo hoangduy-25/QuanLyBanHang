@@ -53,6 +53,7 @@ namespace QuanLyBanHang.Repositories.Implementations
         {
             return Context.YeuThichSanPhams.AsNoTracking()
                 .Include(yt => yt.SanPham)
+                .Include(yt => yt.SanPham.DanhMuc)
                 .Include(yt => yt.SanPham.TonKhos)
                 .Where(yt => yt.TaiKhoanId == taiKhoanId && !yt.SanPham.IsDeleted)
                 .OrderByDescending(yt => yt.NgayTao)

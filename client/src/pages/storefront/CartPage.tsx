@@ -26,6 +26,7 @@ export const CartPage: React.FC = () => {
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [updatingProductId, setUpdatingProductId] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -57,44 +58,93 @@ export const CartPage: React.FC = () => {
     );
   }
 
-  // Enrich cart items with product details
+  if (currentUser.role !== 'KhachHang') {
+    return (
+      <div className="max-w-md mx-auto my-12 bg-white rounded-2xl border border-zinc-200/70 p-8 text-center space-y-4">
+        <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+          <ShoppingBag className="w-5 h-5" />
+        </div>
+        <h2 className="text-base font-bold text-zinc-900">
+          Giỏ hàng chỉ dành cho Khách hàng
+        </h2>
+        <p className="text-xs text-zinc-500">
+          Tài khoản Nhân viên / Quản lý không sử dụng chức năng mua sắm.
+        </p>
+        <button
+          onClick={() => navigate('/portal')}
+          className="h-9 px-5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-white transition-colors"
+        >
+          Về trang quản trị
+        </button>
+      </div>
+    );
+  }
+
+  // Enrich cart items ưu tiên trạng thái khả dụng & giá thật từ API giỏ hàng
   const detailedCart = cart.map((item) => {
     const product = products.find((p) => p.id === item.productId);
-    const isAvailable = Boolean(
-      product && product.isVisible && !product.isDeleted && product.stock > 0
-    );
-    const priceChanged = Boolean(product && product.price !== item.addedPrice);
+    const displayPrice = item.currentPrice ?? product?.price ?? item.addedPrice;
+    const displayStock = item.stock ?? product?.stock ?? 0;
+    const displayName = item.productName || product?.name || 'Sản phẩm không còn khả dụng';
+    const displayImage = item.productImage || product?.imageUrl;
+    const isAvailable =
+      item.isAvailable !== undefined
+        ? item.isAvailable
+        : Boolean(product && product.isVisible && !product.isDeleted && displayStock >= item.quantity);
+    const canAdjustQty = Boolean(product && product.isVisible && !product.isDeleted && displayStock > 0);
+    const priceChanged = displayPrice !== item.addedPrice;
     return {
       ...item,
       product,
+      displayPrice,
+      displayStock,
+      displayName,
+      displayImage,
       isAvailable,
+      canAdjustQty,
       priceChanged,
     };
   });
 
-  const availableItems = detailedCart.filter((i) => i.isAvailable && i.product);
+  const availableItems = detailedCart.filter((i) => i.isAvailable);
   const subtotal = availableItems.reduce(
-    (sum, i) => sum + (i.product?.price || 0) * i.quantity,
+    (sum, i) => sum + i.displayPrice * i.quantity,
     0
   );
   const totalQuantity = availableItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const handleStepQuantity = async (productId: string, nextQty: number) => {
+    if (updatingProductId === productId) return;
+    if (nextQty < 0) {
+      showToast('Số lượng sản phẩm không hợp lệ.');
+      return;
+    }
     if (nextQty === 0) {
       // UC-31 2b: Số lượng bằng 0 -> Hỏi xác nhận xóa (UC-32)
       setConfirmRemoveId(productId);
       return;
     }
-    const res = await updateCartQuantity(productId, nextQty);
-    if (!res.ok || res.message.includes('vượt tồn kho')) {
-      showToast(res.message);
+    setUpdatingProductId(productId);
+    try {
+      const res = await updateCartQuantity(productId, nextQty);
+      if (!res.ok || res.message.includes('vượt')) {
+        showToast(res.message);
+      }
+    } finally {
+      setUpdatingProductId(null);
     }
   };
 
   const handleConfirmRemove = async (productId: string) => {
-    const res = await removeFromCart(productId);
-    setConfirmRemoveId(null);
-    showToast(res.message);
+    if (updatingProductId === productId) return;
+    setUpdatingProductId(productId);
+    try {
+      const res = await removeFromCart(productId);
+      setConfirmRemoveId(null);
+      showToast(res.message);
+    } finally {
+      setUpdatingProductId(null);
+    }
   };
 
   return (
@@ -153,7 +203,8 @@ export const CartPage: React.FC = () => {
             {detailedCart.map((item) => {
               const p = item.product;
               const category = categories.find((c) => c.id === p?.categoryId);
-              const lineTotal = (p?.price || item.addedPrice) * item.quantity;
+              const lineTotal = item.displayPrice * item.quantity;
+              const isBusy = updatingProductId === item.productId;
 
               return (
                 <div
@@ -167,10 +218,10 @@ export const CartPage: React.FC = () => {
                       onClick={() => p && navigate(`/product/${p.id}`)}
                       className="w-20 h-16 rounded-xl bg-[#f1f5f9] overflow-hidden shrink-0 cursor-pointer border border-zinc-100"
                     >
-                      {p && (
+                      {item.displayImage && (
                         <img
-                          src={p.imageUrl}
-                          alt={p.name}
+                          src={item.displayImage}
+                          alt={item.displayName}
                           className="w-full h-full object-cover"
                         />
                       )}
@@ -180,33 +231,37 @@ export const CartPage: React.FC = () => {
                       <div className="flex items-center gap-2 text-[11px] text-zinc-400">
                         <span>{category?.name || 'Danh mục'}</span>
                         <span>·</span>
-                        <span>{p ? `Tồn: ${p.stock}` : 'Không tồn tại'}</span>
+                        <span>
+                          {item.displayStock > 0
+                            ? `Tồn: ${item.displayStock}`
+                            : 'Hết hàng / Ẩn'}
+                        </span>
                       </div>
 
                       <h3
                         onClick={() => p && navigate(`/product/${p.id}`)}
                         className="text-sm font-bold text-zinc-900 truncate cursor-pointer hover:text-blue-600"
                       >
-                        {p?.name || 'Sản phẩm không còn tồn tại'}
+                        {item.displayName}
                       </h3>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span className="font-semibold text-zinc-700">
-                          {formatVND(p?.price || item.addedPrice)}
+                          {formatVND(item.displayPrice)}
                         </span>
 
                         {/* UC-29 3c: Giá thay đổi từ lúc thêm */}
-                        {item.priceChanged && p && (
+                        {item.priceChanged && (
                           <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
                             <AlertCircle className="w-3 h-3" />
                             Giá đã cập nhật (lúc thêm: {formatVND(item.addedPrice)})
                           </span>
                         )}
 
-                        {/* UC-29 3b: Sản phẩm hết hàng hoặc bị ẩn */}
+                        {/* UC-29 3b: Sản phẩm hết hàng, bị ẩn hoặc vượt tồn */}
                         {!item.isAvailable && (
                           <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full font-medium">
-                            Không còn khả dụng (đã loại khỏi tổng tiền)
+                            {item.unavailableReason || 'Không còn khả dụng'} (đã loại khỏi tổng tiền)
                           </span>
                         )}
                       </div>
@@ -215,14 +270,15 @@ export const CartPage: React.FC = () => {
 
                   {/* Right Controls: Quantity Stepper + Line Total + Remove */}
                   <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
-                    {item.isAvailable && p && (
+                    {item.canAdjustQty && (
                       <div className="inline-flex items-center rounded-full border border-zinc-200/80 bg-zinc-50/70 h-8 px-1">
                         <button
                           type="button"
+                          disabled={isBusy}
                           onClick={() =>
                             handleStepQuantity(item.productId, item.quantity - 1)
                           }
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white transition-colors"
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white transition-colors disabled:opacity-40"
                           aria-label="Giảm số lượng"
                         >
                           <Minus className="w-3 h-3" />
@@ -230,7 +286,8 @@ export const CartPage: React.FC = () => {
                         <input
                           type="number"
                           min={1}
-                          max={p.stock}
+                          max={item.displayStock}
+                          disabled={isBusy}
                           value={item.quantity}
                           onChange={(e) => {
                             const val = parseInt(e.target.value, 10);
@@ -238,14 +295,15 @@ export const CartPage: React.FC = () => {
                               handleStepQuantity(item.productId, val);
                             }
                           }}
-                          className="w-8 text-center bg-transparent text-xs font-semibold text-zinc-900 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-8 text-center bg-transparent text-xs font-semibold text-zinc-900 focus:outline-none disabled:opacity-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         <button
                           type="button"
+                          disabled={isBusy}
                           onClick={() =>
                             handleStepQuantity(item.productId, item.quantity + 1)
                           }
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white transition-colors"
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white transition-colors disabled:opacity-40"
                           aria-label="Tăng số lượng"
                         >
                           <Plus className="w-3 h-3" />
@@ -261,8 +319,10 @@ export const CartPage: React.FC = () => {
 
                     {/* UC-32: Xác nhận xóa dòng khỏi giỏ */}
                     <button
+                      type="button"
+                      disabled={isBusy}
                       onClick={() => setConfirmRemoveId(item.productId)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:bg-rose-50 hover:text-rose-500 transition-colors"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:bg-rose-50 hover:text-rose-500 transition-colors disabled:opacity-40"
                       aria-label="Xóa sản phẩm"
                     >
                       <Trash2 className="w-4 h-4" />
