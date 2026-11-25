@@ -101,6 +101,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-41: Hủy đơn hàng (hoàn tồn kho + hoàn lượt mã giảm giá + ghi lịch sử)
         public async Task HuyAsync(int nguoiDungId, string vaiTro, int donHangId, HuyDonHangRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.LyDoHuy))
+                throw new BadRequestException("Vui lòng nhập lý do hủy đơn hàng.");
             var dh = await _uow.DonHangs.GetDetailByIdAsync(donHangId);
             if (dh == null)
                 throw new NotFoundException("Không tìm thấy đơn hàng.");
@@ -211,6 +213,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-44: Cập nhật trạng thái đơn hàng theo đúng thứ tự: DaXacNhan -> DangChuanBi -> DangGiao -> HoanThanh
         public async Task CapNhatTrangThaiAsync(int nhanVienId, int donHangId, CapNhatTrangThaiDonHangRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.TrangThaiMoi))
+                throw new BadRequestException("Vui lòng chọn trạng thái đơn hàng mới.");
             var dh = await _uow.DonHangs.GetByIdAsync(donHangId);
             if (dh == null)
                 throw new NotFoundException("Không tìm thấy đơn hàng.");

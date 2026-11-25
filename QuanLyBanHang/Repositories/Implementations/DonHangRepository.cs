@@ -39,7 +39,12 @@ namespace QuanLyBanHang.Repositories.Implementations
                 q = q.Where(d => d.NgayDat >= query.TuNgay.Value);
 
             if (query.DenNgay.HasValue)
-                q = q.Where(d => d.NgayDat <= query.DenNgay.Value);
+            {
+                var denNgay = query.DenNgay.Value;
+                if (denNgay.TimeOfDay == TimeSpan.Zero)
+                    denNgay = denNgay.AddDays(1).AddSeconds(-1);
+                q = q.Where(d => d.NgayDat <= denNgay);
+            }
 
             var total = await q.CountAsync();
 

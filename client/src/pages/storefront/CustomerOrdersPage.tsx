@@ -76,6 +76,8 @@ export const CustomerOrdersPage: React.FC = () => {
   const [cancellingOrder, setCancellingOrder] = useState<Order | null>(null);
   const [selectedReason, setSelectedReason] = useState(CANCEL_REASONS[0]);
   const [customReason, setCustomReason] = useState('');
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Quick Review Modal state (UC-53 / UC-54, ISS-03, ISS-09, MAJ-06)
   const [reviewingItem, setReviewingItem] = useState<{
@@ -157,14 +159,26 @@ export const CustomerOrdersPage: React.FC = () => {
 
   const handleConfirmCancel = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cancellingOrder) return;
+    if (!cancellingOrder || isCancelling) return;
     const finalReason =
       selectedReason === 'Lý do khác' ? customReason.trim() : selectedReason;
-    const res = await cancelCustomerOrder(cancellingOrder.id, finalReason);
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setCancellingOrder(null);
-      setCustomReason('');
+    if (finalReason.length < 3) {
+      setCancelError('Vui lòng nhập lý do hủy đơn tối thiểu 3 ký tự.');
+      return;
+    }
+    setCancelError(null);
+    setIsCancelling(true);
+    try {
+      const res = await cancelCustomerOrder(cancellingOrder.id, finalReason);
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setCancellingOrder(null);
+        setCustomReason('');
+      } else {
+        setCancelError(res.message);
+      }
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -709,6 +723,13 @@ export const CustomerOrdersPage: React.FC = () => {
               </button>
             </div>
 
+            {cancelError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{cancelError}</span>
+              </div>
+            )}
+
             <p className="text-[12px] text-zinc-600 bg-amber-50/80 border border-amber-200/70 p-3 rounded-2xl">
               Khi hủy đơn, hệ thống sẽ <strong>tự động hoàn lại số lượng tồn kho</strong> của các sản phẩm và <strong>hoàn lại lượt sử dụng mã giảm giá</strong> (nếu có).
             </p>
@@ -753,9 +774,10 @@ export const CustomerOrdersPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[12px] font-semibold"
+                disabled={isCancelling}
+                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[12px] font-semibold disabled:opacity-50"
               >
-                Xác nhận hủy đơn
+                {isCancelling ? 'Đang hủy đơn...' : 'Xác nhận hủy đơn'}
               </button>
             </div>
           </form>

@@ -26,6 +26,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-34: Chọn và kiểm tra địa chỉ nhận hàng
         public async Task<ChonDiaChiResponse> ChonDiaChiAsync(int taiKhoanId, ChonDiaChiRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Vui lòng chọn địa chỉ nhận hàng.");
             var dc = await _uow.DiaChis.GetByIdAndOwnerAsync(request.DiaChiId, taiKhoanId);
             if (dc == null)
                 throw new NotFoundException("Địa chỉ nhận hàng không tồn tại trong sổ địa chỉ của bạn.");
@@ -43,6 +45,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-35: Áp dụng mã giảm giá (chưa trừ lượt dùng cho đến khi xác nhận đặt hàng UC-37)
         public async Task<ApDungMaGiamGiaResponse> ApDungMaGiamGiaAsync(int taiKhoanId, ApDungMaGiamGiaRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.MaGiamGia))
+                throw new BadRequestException("Vui lòng nhập mã giảm giá.");
             var gioHang = await _gioHangService.XemGioHangAsync(taiKhoanId);
             if (!gioHang.Items.Any(i => i.KhaDung))
                 throw new BadRequestException("Giỏ hàng không có sản phẩm khả dụng để áp dụng mã giảm giá.");
@@ -63,6 +67,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-36: Chọn phương thức thanh toán
         public async Task<ChonPhuongThucThanhToanResponse> ChonPhuongThucThanhToanAsync(int taiKhoanId, ChonPhuongThucThanhToanRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.PhuongThucThanhToan))
+                throw new BadRequestException("Vui lòng chọn phương thức thanh toán.");
             var gioHang = await _gioHangService.XemGioHangAsync(taiKhoanId);
 
             // UC-36 1a: Thanh toán khi nhận hàng giới hạn giá trị đơn tối đa
@@ -140,6 +146,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-37 & UC-40: Bấm xác nhận đặt hàng (Transaction nguyên tử: tạo đơn + trừ kho + ghi biến động + trừ lượt mã + xóa giỏ)
         public async Task<XacNhanDatHangResponse> XacNhanDatHangAsync(int taiKhoanId, XacNhanDatHangRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Thông tin đặt hàng không hợp lệ.");
             var diaChi = await _uow.DiaChis.GetByIdAndOwnerAsync(request.DiaChiId, taiKhoanId);
             if (diaChi == null)
                 throw new NotFoundException("Vui lòng chọn địa chỉ nhận hàng hợp lệ.");
@@ -201,7 +209,7 @@ namespace QuanLyBanHang.Services.Implementations
                     NgayDat = DateTimeOffset.Now,
                     TrangThai = TrangThaiDonHang.ChoXacNhan.ToString(),
                     PhuongThucThanhToan = request.PhuongThucThanhToan,
-                    DaThanhToan = false,
+                    DaThanhToan = request.PhuongThucThanhToan != PhuongThucThanhToan.KhiNhanHang.ToString(),
                     TenNguoiNhan = diaChi.TenNguoiNhan,
                     SoDienThoaiNhan = diaChi.SoDienThoai,
                     DiaChiGiaoHang = string.Format("{0}, {1}, {2}, {3}", diaChi.DiaChiCuThe, diaChi.PhuongXa, diaChi.QuanHuyen, diaChi.TinhThanh),

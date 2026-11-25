@@ -99,6 +99,7 @@ export const CheckoutPage: React.FC = () => {
 
   // Checkout Error, Price-Change (UC-37 2b), Online Payment Retry (UC-37 6a) & Success State
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [showPriceChangeModal, setShowPriceChangeModal] = useState(false);
   const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
@@ -114,10 +115,11 @@ export const CheckoutPage: React.FC = () => {
       })
       .filter(
         (item) =>
+          item.isAvailable !== false &&
           item.product &&
           item.product.isVisible &&
           !item.product.isDeleted &&
-          item.product.stock > 0
+          item.product.stock >= item.quantity
       );
   }, [cart, products]);
 
@@ -302,8 +304,6 @@ export const CheckoutPage: React.FC = () => {
     }
     setSelectedAddressId(res.address.id);
     setShowAddAddress(false);
-    setDistrict('');
-    setWard('');
     setDetailAddress('');
   };
 
@@ -311,24 +311,36 @@ export const CheckoutPage: React.FC = () => {
     isCodDisabled && paymentMethod === 'KhiNhanHang' ? 'ChuyenKhoan' : paymentMethod;
 
   const executePlaceOrder = async (overrideMethod?: PaymentMethod) => {
+    if (isPlacingOrder) return;
     setCheckoutError(null);
-    const res = await placeOrder({
-      addressId: selectedAddressId,
-      paymentMethod: overrideMethod || effectivePaymentMethod,
-      voucherCode: appliedVoucherCode,
-    });
+    setIsPlacingOrder(true);
+    try {
+      const res = await placeOrder({
+        addressId: selectedAddressId,
+        paymentMethod: overrideMethod || effectivePaymentMethod,
+        voucherCode: appliedVoucherCode,
+      });
 
-    if (!res.ok || !res.order) {
-      setCheckoutError(res.message);
+      if (!res.ok || !res.order) {
+        setCheckoutError(res.message);
+        setPaymentGatewayState('IDLE');
+        return;
+      }
       setPaymentGatewayState('IDLE');
-      return;
+      setPlacedOrder(res.order);
+    } finally {
+      setIsPlacingOrder(false);
     }
-    setPaymentGatewayState('IDLE');
-    setPlacedOrder(res.order);
   };
 
   const handleConfirmOrder = () => {
+    if (isPlacingOrder) return;
     setCheckoutError(null);
+    if (!selectedAddressId) {
+      setCheckoutError('Vui lòng thêm và chọn địa chỉ nhận hàng trước khi đặt hàng.');
+      setShowAddAddress(true);
+      return;
+    }
     // UC-37 2b: Yêu cầu xác nhận lại tổng tiền nếu giá sản phẩm đã thay đổi
     if (priceChangedItems.length > 0 && !priceChangeConfirmed) {
       setShowPriceChangeModal(true);
@@ -339,7 +351,7 @@ export const CheckoutPage: React.FC = () => {
       setPaymentGatewayState('AWAITING');
       return;
     }
-    executePlaceOrder();
+    void executePlaceOrder();
   };
 
   return (
@@ -428,8 +440,8 @@ export const CheckoutPage: React.FC = () => {
                     className="h-9 px-3 rounded-lg bg-white border border-zinc-200/80 focus:outline-none focus:border-zinc-400"
                   />
                   <input
-                    type="text"
-                    maxLength={10}
+                    type="tel"
+                    maxLength={15}
                     placeholder="Số điện thoại *"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -847,15 +859,16 @@ export const CheckoutPage: React.FC = () => {
           <button
             type="button"
             disabled={
-              selectedAddressObj
+              isPlacingOrder ||
+              (selectedAddressObj
                 ? !isAddressInDeliveryZone(
                     selectedAddressObj.province,
                     selectedAddressObj.district
                   )
-                : false
+                : false)
             }
             onClick={handleConfirmOrder}
-            className={`w-full h-10 rounded-full text-xs font-semibold transition-colors ${
+            className={`w-full h-10 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
               selectedAddressObj &&
               !isAddressInDeliveryZone(
                 selectedAddressObj.province,
@@ -865,7 +878,7 @@ export const CheckoutPage: React.FC = () => {
                 : 'bg-zinc-900 hover:bg-zinc-800 text-white'
             }`}
           >
-            Xác nhận đặt hàng
+            {isPlacingOrder ? 'Đang xử lý đơn hàng...' : 'Xác nhận đặt hàng'}
           </button>
         </div>
       </div>
@@ -979,10 +992,11 @@ export const CheckoutPage: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <button
                     type="button"
+                    disabled={isPlacingOrder}
                     onClick={() => executePlaceOrder()}
-                    className="w-full h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold"
+                    className="w-full h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold disabled:opacity-50"
                   >
-                    Xác nhận đã thanh toán thành công
+                    {isPlacingOrder ? 'Đang tạo đơn hàng...' : 'Xác nhận đã thanh toán thành công'}
                   </button>
                   <button
                     type="button"

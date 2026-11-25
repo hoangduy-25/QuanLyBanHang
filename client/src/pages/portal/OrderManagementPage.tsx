@@ -94,6 +94,8 @@ export const OrderManagementPage: React.FC = () => {
   const [rejectingOrder, setRejectingOrder] = useState<Order | null>(null);
   const [rejectPreset, setRejectPreset] = useState(REJECT_PRESETS[0]);
   const [rejectCustom, setRejectCustom] = useState('');
+  const [rejectError, setRejectError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const dateRangeError =
     orderDateFrom && orderDateTo && orderDateFrom > orderDateTo
@@ -157,36 +159,60 @@ export const OrderManagementPage: React.FC = () => {
   }, [selectedOrderId, loadOrderDetail]);
 
   const handleConfirmOrder = async (orderId: string) => {
-    const res = await staffConfirmOrRejectOrder(
-      orderId,
-      'CONFIRM',
-      statusNote.trim() || undefined
-    );
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) setStatusNote('');
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const res = await staffConfirmOrRejectOrder(
+        orderId,
+        'CONFIRM',
+        statusNote.trim() || undefined
+      );
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.ok) setStatusNote('');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rejectingOrder) return;
+    if (!rejectingOrder || isProcessing) return;
     const reason =
       rejectPreset === 'Lý do khác' ? rejectCustom.trim() : rejectPreset;
-    const res = await staffConfirmOrRejectOrder(rejectingOrder.id, 'REJECT', reason);
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setRejectingOrder(null);
-      setRejectCustom('');
+    if (reason.length < 3) {
+      setRejectError('Vui lòng nhập lý do từ chối/hủy đơn tối thiểu 3 ký tự.');
+      return;
+    }
+    setRejectError(null);
+    setIsProcessing(true);
+    try {
+      const res = await staffConfirmOrRejectOrder(rejectingOrder.id, 'REJECT', reason);
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setRejectingOrder(null);
+        setRejectCustom('');
+      } else {
+        setRejectError(res.message);
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleAdvanceStatus = async (orderId: string, nextStatus: OrderStatus) => {
-    const res = await staffAdvanceOrderStatus(
-      orderId,
-      nextStatus,
-      statusNote.trim() || undefined
-    );
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) setStatusNote('');
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const res = await staffAdvanceOrderStatus(
+        orderId,
+        nextStatus,
+        statusNote.trim() || undefined
+      );
+      setFeedback({ ok: res.ok, text: res.message });
+      if (res.ok) setStatusNote('');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -682,6 +708,13 @@ export const OrderManagementPage: React.FC = () => {
               </button>
             </div>
 
+            {rejectError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{rejectError}</span>
+              </div>
+            )}
+
             <p className="text-xs text-zinc-600 bg-amber-50 border border-amber-200/70 p-3 rounded-xl">
               Tồn kho của các sản phẩm trong đơn và lượt sử dụng mã giảm giá sẽ được hoàn trả tự động.
             </p>
@@ -727,9 +760,10 @@ export const OrderManagementPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold"
+                disabled={isProcessing}
+                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Xác nhận từ chối
+                {isProcessing ? 'Đang xử lý...' : 'Xác nhận từ chối'}
               </button>
             </div>
           </form>
