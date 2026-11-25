@@ -45,7 +45,9 @@ export const ReviewModerationPage: React.FC = () => {
   // Admin delete modal
   const [deletingReview, setDeletingReview] = useState<Review | null>(null);
   const [deleteReason, setDeleteReason] = useState('Ngôn từ không phù hợp / Spam quảng cáo');
-
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const dateRangeError =
     dateFrom && dateTo && dateFrom > dateTo
       ? 'Ngày bắt đầu không được lớn hơn ngày kết thúc.'
@@ -102,18 +104,39 @@ export const ReviewModerationPage: React.FC = () => {
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeReview) return;
-    const res = await replyToReview(activeReview.id, replyDraft);
-    setFeedback({ ok: res.ok, text: res.message });
+    if (!activeReview || isSubmitting) return;
+    if (!replyDraft.trim()) {
+      setFeedback({ ok: false, text: 'Vui lòng nhập nội dung phản hồi trước khi gửi.' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await replyToReview(activeReview.id, replyDraft);
+      setFeedback({ ok: res.ok, text: res.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleConfirmDelete = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deletingReview) return;
-    const res = await adminDeleteReview(deletingReview.id, deleteReason);
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setDeletingReview(null);
+    if (!deletingReview || isSubmitting) return;
+    if (deleteReason.trim().length < 3) {
+      setDeleteError('Vui lòng nhập lý do gỡ bỏ tối thiểu 3 ký tự.');
+      return;
+    }
+    setDeleteError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await adminDeleteReview(deletingReview.id, deleteReason);
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setDeletingReview(null);
+      } else {
+        setDeleteError(res.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -519,7 +542,8 @@ export const ReviewModerationPage: React.FC = () => {
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors disabled:opacity-50"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>
@@ -553,6 +577,13 @@ export const ReviewModerationPage: React.FC = () => {
               </button>
             </div>
 
+            {deleteError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
             <p className="text-xs text-zinc-500">
               Bạn đang gỡ bỏ đánh giá của <strong>{deletingReview.userName}</strong>. Vui lòng ghi nhận lý do kiểm duyệt:
             </p>
@@ -574,7 +605,8 @@ export const ReviewModerationPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-50"
               >
                 Xác nhận gỡ
               </button>

@@ -89,6 +89,8 @@ export const CustomerOrdersPage: React.FC = () => {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewImages, setReviewImages] = useState<string[]>([]);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const dateRangeError =
     orderDateFrom && orderDateTo && orderDateFrom > orderDateTo
@@ -196,6 +198,7 @@ export const CustomerOrdersPage: React.FC = () => {
         r.productId === item.productId &&
         r.userId === currentUser.id
     );
+    setReviewError(null);
     setReviewingItem({ orderId, ...item });
     setReviewRating(existing ? existing.rating : 5);
     setReviewComment(existing ? existing.comment : '');
@@ -204,17 +207,30 @@ export const CustomerOrdersPage: React.FC = () => {
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reviewingItem) return;
-    const res = await submitReview(
-      reviewingItem.productId,
-      reviewRating,
-      reviewComment,
-      reviewImages,
-      reviewingItem.orderId
-    );
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setReviewingItem(null);
+    if (!reviewingItem || isSubmittingReview) return;
+    if (!reviewComment.trim()) {
+      setReviewError('Vui lòng nhập nhận xét chi tiết.');
+      return;
+    }
+
+    setReviewError(null);
+    setIsSubmittingReview(true);
+    try {
+      const res = await submitReview(
+        reviewingItem.productId,
+        reviewRating,
+        reviewComment,
+        reviewImages,
+        reviewingItem.orderId
+      );
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setReviewingItem(null);
+      } else {
+        setReviewError(res.message);
+      }
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -804,6 +820,13 @@ export const CustomerOrdersPage: React.FC = () => {
               </button>
             </div>
 
+            {reviewError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{reviewError}</span>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8f9fa] border border-zinc-200/60">
               <img
                 src={reviewingItem.productImage}
@@ -877,9 +900,10 @@ export const CustomerOrdersPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-[12px] font-semibold"
+                disabled={isSubmittingReview}
+                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-[12px] font-semibold disabled:opacity-50"
               >
-                Gửi đánh giá
+                {isSubmittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
               </button>
             </div>
           </form>

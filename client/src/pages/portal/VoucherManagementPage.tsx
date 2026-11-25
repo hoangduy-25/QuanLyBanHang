@@ -61,6 +61,8 @@ export const VoucherManagementPage: React.FC = () => {
   const [endDate, setEndDate] = useState('2027-12-31');
   const [usageLimit, setUsageLimit] = useState('100');
   const [isActiveOnCreate, setIsActiveOnCreate] = useState(true);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const visibleVouchers = useMemo(
     () => vouchers.filter((v) => !v.isDeleted),
@@ -118,6 +120,7 @@ export const VoucherManagementPage: React.FC = () => {
     setEndDate('2027-12-31');
     setUsageLimit('50');
     setIsActiveOnCreate(true);
+    setModalError(null);
     setShowModal(true);
   };
 
@@ -132,31 +135,81 @@ export const VoucherManagementPage: React.FC = () => {
     setStartDate(v.startDate.slice(0, 10));
     setEndDate(v.endDate.slice(0, 10));
     setUsageLimit(String(v.usageLimit));
+    setModalError(null);
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
-      code,
-      description,
-      discountType,
-      discountValue: Number(discountValue),
-      maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
-      minOrderValue: Number(minOrderValue),
-      startDate,
-      endDate,
-      usageLimit: Number(usageLimit),
-      ...(editingVoucher ? {} : { isActive: isActiveOnCreate }),
-    };
+    if (isSaving) return;
 
-    const res = editingVoucher
-      ? await updateVoucher(editingVoucher.id, payload)
-      : await createVoucher(payload);
+    const cleanCode = code.trim().toUpperCase();
+    const val = Number(discountValue);
+    const minVal = Number(minOrderValue);
+    const limit = Number(usageLimit);
+    const maxVal = maxDiscountAmount.trim() ? Number(maxDiscountAmount) : undefined;
 
-    setFeedback({ ok: res.ok, text: res.message });
-    if (res.ok) {
-      setShowModal(false);
+    if (cleanCode.length < 2) {
+      setModalError('Mã giảm giá phải có ít nhất 2 ký tự.');
+      return;
+    }
+    if (Number.isNaN(val) || val <= 0) {
+      setModalError('Giá trị giảm phải lớn hơn 0.');
+      return;
+    }
+    if (discountType === 'PhanTram' && (val < 1 || val > 100)) {
+      setModalError('Mức giảm theo phần trăm phải từ 1% đến 100%.');
+      return;
+    }
+    if (maxVal !== undefined && (Number.isNaN(maxVal) || maxVal <= 0)) {
+      setModalError('Mức giảm tối đa phải lớn hơn 0.');
+      return;
+    }
+    if (Number.isNaN(minVal) || minVal < 0) {
+      setModalError('Giá trị đơn tối thiểu không được âm.');
+      return;
+    }
+    if (!startDate || !endDate || endDate <= startDate) {
+      setModalError('Ngày kết thúc phải sau ngày bắt đầu.');
+      return;
+    }
+    if (!Number.isInteger(limit) || limit <= 0) {
+      setModalError('Tổng lượt dùng phải là số nguyên dương.');
+      return;
+    }
+    if (editingVoucher && limit < editingVoucher.usedCount) {
+      setModalError(`Tổng lượt dùng (${limit}) không được nhỏ hơn số lượt đã dùng (${editingVoucher.usedCount}).`);
+      return;
+    }
+
+    setModalError(null);
+    setIsSaving(true);
+    try {
+      const payload = {
+        code: cleanCode,
+        description,
+        discountType,
+        discountValue: val,
+        maxDiscountAmount: discountType === 'PhanTram' ? maxVal : undefined,
+        minOrderValue: minVal,
+        startDate,
+        endDate,
+        usageLimit: limit,
+        ...(editingVoucher ? {} : { isActive: isActiveOnCreate }),
+      };
+
+      const res = editingVoucher
+        ? await updateVoucher(editingVoucher.id, payload)
+        : await createVoucher(payload);
+
+      if (res.ok) {
+        setFeedback({ ok: true, text: res.message });
+        setShowModal(false);
+      } else {
+        setModalError(res.message);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -555,6 +608,13 @@ export const VoucherManagementPage: React.FC = () => {
               </button>
             </div>
 
+            {modalError && (
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{modalError}</span>
+          </div>
+        )}
+
             {editingVoucher && editingVoucher.usedCount > 0 && (
               <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200/70 p-2.5 rounded-xl">
                 Mã này đã được áp dụng cho {editingVoucher.usedCount} đơn hàng. Mã code, loại giảm giá, mức giảm, giảm tối đa và đơn tối thiểu được cố định để bảo toàn dữ liệu đối soát.
@@ -708,9 +768,10 @@ export const VoucherManagementPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold"
+                disabled={isSaving}
+                className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold disabled:opacity-50"
               >
-                Lưu khuyến mãi
+                {isSaving ? 'Đang lưu...' : 'Lưu khuyến mãi'}
               </button>
             </div>
           </form>

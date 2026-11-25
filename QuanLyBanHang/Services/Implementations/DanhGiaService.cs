@@ -54,6 +54,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-53: Gửi đánh giá sản phẩm đã mua
         public async Task<DanhGiaResponse> TaoAsync(int khachHangId, TaoDanhGiaRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu đánh giá không hợp lệ.");
             ValidateReviewContent(request.NoiDung);
 
             // Kiểm tra đã mua sản phẩm và đơn hàng đã Hoàn thành
@@ -72,7 +74,7 @@ namespace QuanLyBanHang.Services.Implementations
                 DonHangId = request.DonHangId,
                 SoSao = request.SoSao,
                 NoiDung = request.NoiDung.Trim(),
-                HinhAnh = request.HinhAnh != null ? request.HinhAnh.Trim() : null,
+                HinhAnh = string.IsNullOrWhiteSpace(request.HinhAnh) ? null : request.HinhAnh.Trim(),
                 DaChinhSua = false,
                 IsDeleted = false,
                 NgayTao = DateTimeOffset.Now
@@ -88,6 +90,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-54: Chỉnh sửa đánh giá của mình
         public async Task<DanhGiaResponse> SuaAsync(int khachHangId, int danhGiaId, SuaDanhGiaRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu cập nhật đánh giá không hợp lệ.");
             ValidateReviewContent(request.NoiDung);
 
             var entity = await _uow.DanhGias.GetActiveDetailByIdAsync(danhGiaId);
@@ -99,7 +103,7 @@ namespace QuanLyBanHang.Services.Implementations
 
             entity.SoSao = request.SoSao;
             entity.NoiDung = request.NoiDung.Trim();
-            entity.HinhAnh = request.HinhAnh != null ? request.HinhAnh.Trim() : null;
+            entity.HinhAnh = string.IsNullOrWhiteSpace(request.HinhAnh) ? null : request.HinhAnh.Trim();
             entity.DaChinhSua = true;
             entity.NgayCapNhat = DateTimeOffset.Now;
 
@@ -169,6 +173,8 @@ namespace QuanLyBanHang.Services.Implementations
         // UC-57: Nhân viên / Quản lý trả lời hoặc cập nhật phản hồi đánh giá
         public async Task<PhanHoiDanhGiaResponse> TraLoiAsync(int nguoiTraLoiId, int danhGiaId, TraLoiDanhGiaRequest request)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.NoiDung))
+                throw new BadRequestException("Vui lòng nhập nội dung phản hồi đánh giá.");
             var dg = await _uow.DanhGias.GetActiveDetailByIdAsync(danhGiaId);
             if (dg == null)
                 throw new NotFoundException("Đánh giá không còn tồn tại.");

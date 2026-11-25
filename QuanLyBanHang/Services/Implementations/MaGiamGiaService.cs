@@ -44,6 +44,8 @@ namespace QuanLyBanHang.Services.Implementations
 
         public async Task<MaGiamGiaResponse> ThemAsync(TaoMaGiamGiaRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu mã giảm giá không hợp lệ.");
             ValidateVoucherRules(request);
 
             if (await _uow.MaGiamGias.ExistsMaAsync(request.Ma))
@@ -72,6 +74,8 @@ namespace QuanLyBanHang.Services.Implementations
 
         public async Task<MaGiamGiaResponse> SuaAsync(int id, SuaMaGiamGiaRequest request)
         {
+            if (request == null)
+                throw new BadRequestException("Dữ liệu cập nhật mã giảm giá không hợp lệ.");
             var entity = await _uow.MaGiamGias.GetActiveByIdAsync(id);
             if (entity == null)
                 throw new NotFoundException("Mã giảm giá không tồn tại.");
@@ -135,6 +139,8 @@ namespace QuanLyBanHang.Services.Implementations
 
             if (request.Loai == LoaiGiamGia.PhanTram.ToString() && (request.GiaTri < 1 || request.GiaTri > 100))
                 throw new BadRequestException("Mức giảm theo phần trăm phải từ 1 đến 100.");
+            if (request.Loai == LoaiGiamGia.SoTien.ToString())
+                request.GiamToiDa = null;
         }
 
         private static MaGiamGiaResponse Map(MaGiamGia m)
