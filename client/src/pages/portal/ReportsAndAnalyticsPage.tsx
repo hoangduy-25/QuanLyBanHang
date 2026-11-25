@@ -191,6 +191,8 @@ export const ReportsAndAnalyticsPage: React.FC = () => {
         if (cancelled) return;
         if (res.ok && res.data) {
           setBestSellers(res.data);
+        } else if (!res.ok) {
+          setReportError(res.message);
         }
       });
 
@@ -213,6 +215,8 @@ export const ReportsAndAnalyticsPage: React.FC = () => {
         if (cancelled) return;
         if (res.ok && res.data) {
           setDeadStockItems(res.data);
+        } else if (!res.ok) {
+          setReportError(res.message);
         }
       });
 
@@ -270,6 +274,7 @@ export const ReportsAndAnalyticsPage: React.FC = () => {
 
   // UC-62: Gọi thẳng GET /api/bao-cao/in-bao-cao và mở cửa sổ in HTML từ Server
   const handlePrintServerHtml = async () => {
+    if (isPrinting) return;
     if (dateRangeError) {
       setPrintError(dateRangeError);
       return;

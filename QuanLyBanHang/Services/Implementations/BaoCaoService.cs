@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using QuanLyBanHang.Models.DTOs.BaoCao;
+﻿using QuanLyBanHang.Models.DTOs.BaoCao;
 using QuanLyBanHang.Repositories.Interfaces;
 using QuanLyBanHang.Services.Exceptions;
 using QuanLyBanHang.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace QuanLyBanHang.Services.Implementations
 {
@@ -79,9 +80,14 @@ namespace QuanLyBanHang.Services.Implementations
             sb.AppendLine("<!DOCTYPE html><html lang='vi'><head><meta charset='utf-8'/><title>Báo cáo thống kê</title>");
             sb.AppendLine("<style>body{font-family:Arial,sans-serif;padding:24px;}table{width:100%;border-collapse:collapse;margin-top:16px;}th,td{border:1px solid #ccc;padding:8px;text-align:left;}th{background:#f3f4f6;}</style>");
             sb.AppendLine("</head><body>");
-            sb.AppendFormat("<h2>BÁO CÁO THỐNG KÊ ({0})</h2>", type.ToUpperInvariant());
-            sb.AppendFormat("<p>Người lập: <strong>{0}</strong> | Thời điểm lập: {1:dd/MM/yyyy HH:mm}</p>",
-                string.IsNullOrWhiteSpace(nguoiLap) ? "Quản lý" : nguoiLap, DateTime.Now);
+            var safeAuthor = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(nguoiLap) ? "Quản lý" : nguoiLap);
+            var kyBaoCao = (tuNgay.HasValue || denNgay.HasValue)
+                ? string.Format("{0} → {1}", tuNgay.HasValue ? tuNgay.Value.ToString("dd/MM/yyyy") : "...", denNgay.HasValue ? denNgay.Value.ToString("dd/MM/yyyy") : "...")
+                : "30 ngày gần nhất";
+
+            sb.AppendFormat("<h2>BÁO CÁO THỐNG KÊ ({0})</h2>", WebUtility.HtmlEncode(type.ToUpperInvariant()));
+            sb.AppendFormat("<p>Khoảng thời gian: <strong>{0}</strong> | Người lập: <strong>{1}</strong> | Thời điểm lập: {2:dd/MM/yyyy HH:mm}</p>",
+                kyBaoCao, safeAuthor, DateTime.Now);
 
             if (type == "doanh-thu")
             {
@@ -103,7 +109,12 @@ namespace QuanLyBanHang.Services.Implementations
 
                 sb.AppendLine("<table><tr><th>Hạng</th><th>Mã SP</th><th>Tên sản phẩm</th><th>SL bán</th><th>Doanh thu (VNĐ)</th></tr>");
                 foreach (var row in list)
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4:N0}</td></tr>", row.ThuHang, row.MaSanPham, row.TenSanPham, row.SoLuongBan, row.DoanhThu);
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4:N0}</td></tr>",
+                        row.ThuHang,
+                        WebUtility.HtmlEncode(row.MaSanPham),
+                        WebUtility.HtmlEncode(row.TenSanPham),
+                        row.SoLuongBan,
+                        row.DoanhThu);
                 sb.AppendLine("</table>");
             }
             else if (type == "ton-lau")
@@ -114,7 +125,12 @@ namespace QuanLyBanHang.Services.Implementations
 
                 sb.AppendLine("<table><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Tồn kho</th><th>Số ngày tồn</th><th>Giá trị tồn (VNĐ)</th></tr>");
                 foreach (var row in list)
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4:N0}</td></tr>", row.MaSanPham, row.TenSanPham, row.SoLuongTon, row.SoNgayTon, row.GiaTriTon);
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4:N0}</td></tr>",
+                        WebUtility.HtmlEncode(row.MaSanPham),
+                        WebUtility.HtmlEncode(row.TenSanPham),
+                        row.SoLuongTon,
+                        row.SoNgayTon,
+                        row.GiaTriTon);
                 sb.AppendLine("</table>");
             }
             else

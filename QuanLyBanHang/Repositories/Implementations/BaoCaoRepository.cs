@@ -29,6 +29,9 @@ namespace QuanLyBanHang.Repositories.Implementations
         // UC-59: Tổng hợp doanh thu đơn Hoàn thành theo ngày / tuần / tháng / năm
         public async Task<List<DoanhThuDTO>> GetDoanhThuAsync(DateTimeOffset tuNgay, DateTimeOffset denNgay, string donVi)
         {
+            if (denNgay.TimeOfDay == TimeSpan.Zero)
+                denNgay = denNgay.AddDays(1).AddSeconds(-1);
+
             var hoanThanh = TrangThaiDonHang.HoanThanh.ToString();
             var rawOrders = await _context.DonHangs.AsNoTracking()
                 .Where(d => d.TrangThai == hoanThanh && d.NgayDat >= tuNgay && d.NgayDat <= denNgay)
@@ -75,7 +78,12 @@ namespace QuanLyBanHang.Repositories.Implementations
                 q = q.Where(ct => ct.DonHang.NgayDat >= query.TuNgay.Value);
 
             if (query.DenNgay.HasValue)
-                q = q.Where(ct => ct.DonHang.NgayDat <= query.DenNgay.Value);
+            {
+                var denNgay = query.DenNgay.Value;
+                if (denNgay.TimeOfDay == TimeSpan.Zero)
+                    denNgay = denNgay.AddDays(1).AddSeconds(-1);
+                q = q.Where(ct => ct.DonHang.NgayDat <= denNgay);
+            }
 
             if (query.DanhMucId.HasValue)
                 q = q.Where(ct => ct.SanPham.DanhMucId == query.DanhMucId.Value);
