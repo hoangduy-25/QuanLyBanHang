@@ -179,7 +179,7 @@ export async function apiRequest<T>(
       ok: false,
       status: 0,
       message:
-        'Không thể kết nối tới máy chủ Backend API. Vui lòng kiểm tra Visual Studio (IIS Express) đã khởi chạy chưa.',
+        'Không thể kết nối tới hệ thống. Vui lòng kiểm tra kết nối mạng và thử lại.',
     };
   }
 }
@@ -233,7 +233,7 @@ export async function apiFetchHtmlReport(
     return {
       ok: false,
       status: 0,
-      message: 'Không thể kết nối tới máy chủ để xuất bản in báo cáo.',
+      message: 'Không thể chuẩn bị bản in báo cáo lúc này. Vui lòng thử lại sau.',
     };
   }
 }

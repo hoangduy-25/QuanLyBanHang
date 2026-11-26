@@ -358,7 +358,7 @@ export const ReportsAndAnalyticsPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-white transition-colors"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>In báo cáo (UC-62)</span>
+            <span>In báo cáo</span>
           </button>
           <button
             type="button"
@@ -971,11 +971,8 @@ export const ReportsAndAnalyticsPage: React.FC = () => {
           <div className="bg-white rounded-3xl border border-zinc-200/80 max-w-lg w-full p-6 shadow-xl space-y-5">
             <div className="flex items-start justify-between border-b border-zinc-100 pb-3.5">
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                  UC-62 · GET /api/bao-cao/in-bao-cao
-                </span>
-                <h2 className="text-base font-bold text-zinc-900 mt-0.5">
-                  Chọn loại bản in HTML từ máy chủ
+                <h2 className="text-base font-bold text-zinc-900">
+                  Chọn loại báo cáo cần in
                 </h2>
                 <p className="text-xs text-zinc-500 mt-0.5">
                   Kỳ áp dụng: {reportPeriodLabel} · Đơn vị: {GRANULARITY_LABELS[granularity]} · Top {topN} · Tồn ≥ {deadStockDays} ngày
@@ -1044,7 +1041,7 @@ export const ReportsAndAnalyticsPage: React.FC = () => {
                 ) : (
                   <Printer className="w-3.5 h-3.5" />
                 )}
-                <span>{isPrinting ? 'Đang tạo bản in...' : 'Mở bản in HTML'}</span>
+                <span>{isPrinting ? 'Đang chuẩn bị bản in...' : 'Xem & In báo cáo'}</span>
               </button>
             </div>
           </div>

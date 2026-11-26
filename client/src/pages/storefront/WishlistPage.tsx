@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Heart, Plus, ArrowLeft, Trash2, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatVND } from '../../utils/formatters';
@@ -23,16 +23,16 @@ export const WishlistPage: React.FC = () => {
           <Heart className="w-6 h-6" />
         </div>
         <h2 className="text-base font-bold text-zinc-900">
-          Vui lòng đăng nhập để xem sản phẩm yêu thích
+          Đăng nhập để xem sản phẩm yêu thích
         </h2>
         <p className="text-[13px] text-zinc-500">
-          Đăng nhập bằng tài khoản Khách hàng để lưu và quản lý danh sách sản phẩm yêu thích của bạn.
+          Lưu và theo dõi những sản phẩm bạn quan tâm bất cứ lúc nào.
         </p>
         <Link
           to="/auth"
           className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
         >
-          Đi tới trang Đăng nhập
+          Đăng nhập
         </Link>
       </div>
     );
@@ -40,17 +40,10 @@ export const WishlistPage: React.FC = () => {
 
   if (currentUser.role !== 'KhachHang') {
     return (
-      <div className="max-w-md mx-auto my-12 bg-white rounded-3xl border border-zinc-200/70 p-8 text-center space-y-4">
-        <h2 className="text-base font-bold text-zinc-900">
-          Danh sách yêu thích chỉ dành cho Khách hàng
-        </h2>
-        <Link
-          to="/portal"
-          className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
-        >
-          Về trang quản trị
-        </Link>
-      </div>
+      <Navigate
+        to={currentUser.role === 'NhanVien' ? '/portal/orders' : '/portal'}
+        replace
+      />
     );
   }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowLeft,
@@ -33,7 +33,6 @@ export const CartPage: React.FC = () => {
     setTimeout(() => setToastMsg(null), 2600);
   };
 
-  // UC-29 1a: Chưa đăng nhập
   if (!currentUser) {
     return (
       <div className="max-w-md mx-auto my-12 bg-white rounded-2xl border border-zinc-200/70 p-8 text-center space-y-4">
@@ -45,14 +44,14 @@ export const CartPage: React.FC = () => {
             Đăng nhập để xem giỏ hàng
           </h2>
           <p className="text-xs text-zinc-500">
-            Vui lòng chọn tài khoản Khách hàng hoặc đăng nhập để quản lý giỏ hàng của bạn.
+            Đăng nhập tài khoản để xem và quản lý các sản phẩm trong giỏ hàng của bạn.
           </p>
         </div>
         <button
           onClick={() => navigate('/auth')}
           className="h-9 px-5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-white transition-colors"
         >
-          Đến trang đăng nhập
+          Đăng nhập
         </button>
       </div>
     );
@@ -60,23 +59,10 @@ export const CartPage: React.FC = () => {
 
   if (currentUser.role !== 'KhachHang') {
     return (
-      <div className="max-w-md mx-auto my-12 bg-white rounded-2xl border border-zinc-200/70 p-8 text-center space-y-4">
-        <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
-          <ShoppingBag className="w-5 h-5" />
-        </div>
-        <h2 className="text-base font-bold text-zinc-900">
-          Giỏ hàng chỉ dành cho Khách hàng
-        </h2>
-        <p className="text-xs text-zinc-500">
-          Tài khoản Nhân viên / Quản lý không sử dụng chức năng mua sắm.
-        </p>
-        <button
-          onClick={() => navigate('/portal')}
-          className="h-9 px-5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-white transition-colors"
-        >
-          Về trang quản trị
-        </button>
-      </div>
+      <Navigate
+        to={currentUser.role === 'NhanVien' ? '/portal/orders' : '/portal'}
+        replace
+      />
     );
   }
 

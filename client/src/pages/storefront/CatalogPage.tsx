@@ -9,6 +9,7 @@ type SortOption = 'DEFAULT' | 'PRICE_ASC' | 'PRICE_DESC' | 'STOCK_DESC';
 
 export const CatalogPage: React.FC = () => {
   const {
+    currentUser,
     products,
     categories,
     wishlistProductIds,
@@ -19,6 +20,9 @@ export const CatalogPage: React.FC = () => {
     addToCart,
     toggleWishlist,
   } = useApp();
+
+  const isStaffOrAdmin =
+    currentUser?.role === 'NhanVien' || currentUser?.role === 'QuanLy';
 
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<SortOption>('DEFAULT');
@@ -259,25 +263,27 @@ export const CatalogPage: React.FC = () => {
                             loading="lazy"
                         />
 
-                        <button
-                            onClick={(e) => handleToggleWish(e, product.id)}
-                            className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200/80 shadow-sm transition-colors ${isLiked
-                                    ? 'bg-rose-50 text-rose-500'
-                                    : 'bg-white/95 text-zinc-600 hover:bg-zinc-50'
-                                }`}
-                            aria-label="Yêu thích"
-                        >
-                            <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-                        </button>
+                        {!isStaffOrAdmin && (
+                          <button
+                              onClick={(e) => handleToggleWish(e, product.id)}
+                              className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200/80 shadow-sm transition-colors ${isLiked
+                                      ? 'bg-rose-50 text-rose-500'
+                                      : 'bg-white/95 text-zinc-600 hover:bg-zinc-50'
+                                  }`}
+                              aria-label="Yêu thích"
+                          >
+                              <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                          </button>
+                        )}
                     </div>
 
                     {/* Card Content */}
                     <div className="px-4 pt-3.5 pb-2 space-y-1">
                       <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                        <span>{category?.name || 'Danh mục 02'}</span>
-                        <span className={isOutOfStock ? 'text-rose-500 font-medium' : ''}>
-                          {isOutOfStock ? 'Hết hàng' : `Tồn: ${product.stock}`}
-                        </span>
+                        <span>{category?.name || 'Sản phẩm'}</span>
+                        {isOutOfStock && (
+                          <span className="text-rose-500 font-medium">Hết hàng</span>
+                        )}
                       </div>
                       <h3 className="text-sm font-bold text-zinc-900 pt-0.5 group-hover:text-blue-600 transition-colors">
                         {product.name}
@@ -296,18 +302,20 @@ export const CatalogPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <button
-                      disabled={isOutOfStock}
-                      onClick={(e) => handleQuickAdd(e, product.id)}
-                      className={`inline-flex items-center gap-1 h-8 px-3.5 rounded-full text-xs font-medium transition-colors ${
-                        isOutOfStock
-                          ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                          : 'bg-zinc-100 hover:bg-zinc-200/80 text-zinc-800'
-                      }`}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{isOutOfStock ? 'Hết hàng' : 'Thêm'}</span>
-                    </button>
+                    {!isStaffOrAdmin && (
+                      <button
+                        disabled={isOutOfStock}
+                        onClick={(e) => handleQuickAdd(e, product.id)}
+                        className={`inline-flex items-center gap-1 h-8 px-3.5 rounded-full text-xs font-medium transition-colors ${
+                          isOutOfStock
+                            ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                            : 'bg-zinc-100 hover:bg-zinc-200/80 text-zinc-800'
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{isOutOfStock ? 'Hết hàng' : 'Thêm'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

@@ -416,7 +416,7 @@ export const VoucherManagementPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setDetailVoucher(voucher)}
-                    title="Xem chi tiết & lịch sử sử dụng (UC-47)"
+                    title="Xem chi tiết & lịch sử sử dụng"
                     className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -474,7 +474,7 @@ export const VoucherManagementPage: React.FC = () => {
                   {detailVoucher.code}
                 </span>
                 <span className="text-xs text-zinc-500">
-                  Chi tiết &amp; Lịch sử áp dụng (UC-47)
+                  Chi tiết &amp; Lịch sử áp dụng
                 </span>
               </div>
               <button

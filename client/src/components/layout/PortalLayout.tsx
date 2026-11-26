@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   Boxes,
   ClipboardList,
-  HelpCircle,
   LogOut,
   MessageSquare,
   Package,
@@ -100,7 +99,6 @@ export const PortalLayout: React.FC = () => {
       to: '/portal/vouchers',
       label: 'Khuyến mãi',
       icon: TicketPercent,
-      isNew: true,
       roles: ['QuanLy'],
     },
     {
@@ -127,27 +125,7 @@ export const PortalLayout: React.FC = () => {
   }
 
   if (!isStaffOrAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#f8f9fa]">
-        <div className="max-w-sm w-full bg-white rounded-2xl border border-zinc-200/80 p-6 text-center space-y-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-200 via-blue-400 to-indigo-500 mx-auto" />
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold text-zinc-900">
-              Cổng quản trị HCShop
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Vui lòng đăng nhập bằng tài khoản Nhân viên hoặc Quản lý để tiếp tục.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/auth')}
-            className="px-5 py-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-xs font-semibold text-white transition-colors"
-          >
-            Đến trang đăng nhập
-          </button>
-        </div>
-      </div>
-    );
+    return <Navigate to={currentUser ? '/' : '/auth'} replace />;
   }
 
   return (
@@ -190,7 +168,7 @@ export const PortalLayout: React.FC = () => {
                   className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
                 >
                   <Store className="w-4 h-4 text-zinc-400" />
-                  <span>Về trang Cửa hàng (/)</span>
+                  <span>Trang bán hàng</span>
                 </button>
                 <div className="my-1.5 border-t border-zinc-100" />
                 <button
@@ -252,7 +230,7 @@ export const PortalLayout: React.FC = () => {
             onClick={() => navigate('/')}
             className="w-full flex items-center gap-3 px-3.5 py-2 rounded-full text-xs font-medium text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900 transition-colors"
           >
-            <HelpCircle className="w-4 h-4 text-zinc-500 stroke-[1.75]" />
+            <Store className="w-4 h-4 text-zinc-500 stroke-[1.75]" />
             <span>Trang bán hàng</span>
           </button>
           <button

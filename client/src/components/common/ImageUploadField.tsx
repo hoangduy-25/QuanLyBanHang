@@ -81,7 +81,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
         for (const file of selected) {
           const res = await uploadApi.uploadImage(file, folder);
           if (!res.ok || !res.data?.url) {
-            setError(res.message || 'Tải hình ảnh lên máy chủ thất bại.');
+            setError(res.message || 'Tải hình ảnh thất bại. Vui lòng thử lại.');
             return;
           }
           uploadedUrls.push(res.data.url);
@@ -102,7 +102,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = (props) => {
       try {
         const res = await uploadApi.uploadImage(file, folder);
         if (!res.ok || !res.data?.url) {
-          setError(res.message || 'Tải hình ảnh lên máy chủ thất bại.');
+          setError(res.message || 'Tải hình ảnh thất bại. Vui lòng thử lại.');
           return;
         }
         props.onChange(res.data.url);

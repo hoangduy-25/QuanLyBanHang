@@ -538,11 +538,7 @@ export const OrderManagementPage: React.FC = () => {
                       </button>
                     )}
                   </div>
-                ) : (
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-[11px] font-medium text-zinc-600">
-                    Chế độ chỉ xem (Quản lý)
-                  </span>
-                )}
+                ) : null}
               </div>
 
               {/* Optional note input when order is active (NhanVien only) */}

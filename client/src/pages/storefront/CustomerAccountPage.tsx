@@ -24,6 +24,7 @@ import {
   isAddressInDeliveryZone,
 } from '../../data/vnLocations';
 import { Gender, ShippingAddress } from '../../types/domain';
+import { ROLE_LABELS } from '../../utils/formatters';
 
 type AccountTab = 'PROFILE' | 'ADDRESSES' | 'SECURITY';
 
@@ -299,19 +300,25 @@ export const CustomerAccountPage: React.FC = () => {
             Quay lại cửa hàng
           </Link>
           <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">
-            Hồ sơ cá nhân & Sổ địa chỉ
+            {currentUser.role === 'KhachHang'
+              ? 'Hồ sơ cá nhân & Sổ địa chỉ'
+              : 'Hồ sơ cá nhân'}
           </h1>
           <p className="text-[13px] text-zinc-500 mt-0.5">
-            Quản lý thông tin tài khoản, địa chỉ nhận hàng và thiết lập bảo mật
+            {currentUser.role === 'KhachHang'
+              ? 'Quản lý thông tin tài khoản, địa chỉ nhận hàng và thiết lập bảo mật'
+              : 'Quản lý thông tin tài khoản và thiết lập bảo mật'}
           </p>
         </div>
 
-        <Link
-          to="/orders"
-          className="px-4 py-2 rounded-full bg-white border border-zinc-200/80 text-[13px] font-medium text-zinc-800 hover:border-zinc-900 transition-colors"
-        >
-          Xem đơn hàng của tôi →
-        </Link>
+        {currentUser.role === 'KhachHang' && (
+          <Link
+            to="/orders"
+            className="px-4 py-2 rounded-full bg-white border border-zinc-200/80 text-[13px] font-medium text-zinc-800 hover:border-zinc-900 transition-colors"
+          >
+            Xem đơn hàng của tôi →
+          </Link>
+        )}
       </div>
 
       {feedback && (
@@ -361,7 +368,7 @@ export const CustomerAccountPage: React.FC = () => {
                 {currentUser.email}
               </div>
               <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-700">
-                Mã TV: {currentUser.code} • {currentUser.role}
+                {ROLE_LABELS[currentUser.role]} • {currentUser.code}
               </span>
             </div>
           </div>

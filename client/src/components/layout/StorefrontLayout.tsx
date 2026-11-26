@@ -90,6 +90,10 @@ export const StorefrontLayout: React.FC = () => {
   }, []);
 
   const isAuthPage = location.pathname === '/auth';
+  const isStaffOrAdmin =
+    currentUser?.role === 'NhanVien' || currentUser?.role === 'QuanLy';
+  const portalHomePath =
+    currentUser?.role === 'NhanVien' ? '/portal/orders' : '/portal';
 
   return (
     <div
@@ -135,20 +139,32 @@ export const StorefrontLayout: React.FC = () => {
               />
             </div>
 
-            {/* Right Actions: Cart + User Profile */}
+            {/* Right Actions: Cart (Customer/Guest) or Portal (Staff/Admin) + User Profile */}
             <div className="flex items-center gap-2.5 shrink-0">
-              <button
-                onClick={() => navigate('/cart')}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100/80 transition-colors"
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>Giỏ hàng</span>
-                {totalCartItems > 0 && (
-                  <span className="ml-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-semibold inline-flex items-center justify-center">
-                    {totalCartItems}
-                  </span>
-                )}
-              </button>
+              {isStaffOrAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(portalHomePath)}
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100/80 transition-colors"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>Trang quản trị</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/cart')}
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100/80 transition-colors"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>Giỏ hàng</span>
+                  {totalCartItems > 0 && (
+                    <span className="ml-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-semibold inline-flex items-center justify-center">
+                      {totalCartItems}
+                    </span>
+                  )}
+                </button>
+              )}
 
               {/* Guest Login Button OR Signed-In User Dropdown */}
               {!currentUser ? (
@@ -201,69 +217,69 @@ export const StorefrontLayout: React.FC = () => {
                         <UserIcon className="w-4 h-4 text-zinc-400" />
                         <span>Hồ sơ cá nhân</span>
                       </button>
-                      <button
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigate('/orders');
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                      >
-                        <Package className="w-4 h-4 text-zinc-400" />
-                        <span>Đơn hàng của tôi</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigate('/wishlist');
-                        }}
-                        className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <Heart className="w-4 h-4 text-zinc-400" />
-                          <span>Sản phẩm yêu thích</span>
-                        </span>
-                        <span className="text-[11px] text-zinc-400">
-                          {wishlistProductIds.length}
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigate('/vouchers');
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                      >
-                        <TicketPercent className="w-4 h-4 text-zinc-400" />
-                        <span>Kho mã giảm giá</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMenuOpen(false);
-                          navigate('/account?tab=addresses');
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                      >
-                        <MapPin className="w-4 h-4 text-zinc-400" />
-                        <span>Sổ địa chỉ</span>
-                      </button>
 
-                      {(currentUser.role === 'NhanVien' ||
-                        currentUser.role === 'QuanLy') && (
+                      {!isStaffOrAdmin && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setMenuOpen(false);
+                              navigate('/orders');
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                          >
+                            <Package className="w-4 h-4 text-zinc-400" />
+                            <span>Đơn hàng của tôi</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setMenuOpen(false);
+                              navigate('/wishlist');
+                            }}
+                            className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <Heart className="w-4 h-4 text-zinc-400" />
+                              <span>Sản phẩm yêu thích</span>
+                            </span>
+                            <span className="text-[11px] text-zinc-400">
+                              {wishlistProductIds.length}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setMenuOpen(false);
+                              navigate('/vouchers');
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                          >
+                            <TicketPercent className="w-4 h-4 text-zinc-400" />
+                            <span>Kho mã giảm giá</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setMenuOpen(false);
+                              navigate('/account?tab=addresses');
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                          >
+                            <MapPin className="w-4 h-4 text-zinc-400" />
+                            <span>Sổ địa chỉ</span>
+                          </button>
+                        </>
+                      )}
+
+                      {isStaffOrAdmin && (
                         <>
                           <div className="my-1.5 border-t border-zinc-100" />
                           <button
                             onClick={() => {
                               setMenuOpen(false);
-                              navigate(
-                                currentUser.role === 'NhanVien'
-                                  ? '/portal/orders'
-                                  : '/portal'
-                              );
+                              navigate(portalHomePath);
                             }}
                             className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
                           >
                             <LayoutDashboard className="w-4 h-4 text-zinc-400" />
-                            <span>Mở trang Quản trị (/portal)</span>
+                            <span>Trang quản trị</span>
                           </button>
                         </>
                       )}

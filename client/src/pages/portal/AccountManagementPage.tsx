@@ -376,7 +376,7 @@ useEffect(() => {
                         <button
                           type="button"
                           onClick={() => setDetailUser(user)}
-                          title="Xem chi tiết tài khoản (UC-08)"
+                          title="Xem chi tiết tài khoản"
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-medium whitespace-nowrap transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5 shrink-0" />

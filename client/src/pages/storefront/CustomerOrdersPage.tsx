@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   Package,
   Search,
@@ -156,6 +156,15 @@ export const CustomerOrdersPage: React.FC = () => {
           Đăng nhập ngay
         </Link>
       </div>
+    );
+  }
+
+  if (currentUser.role !== 'KhachHang') {
+    return (
+      <Navigate
+        to={currentUser.role === 'NhanVien' ? '/portal/orders' : '/portal'}
+        replace
+      />
     );
   }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowLeft,
@@ -238,6 +238,15 @@ export const CheckoutPage: React.FC = () => {
           </button>
         </div>
       </div>
+    );
+  }
+
+  if (currentUser && currentUser.role !== 'KhachHang') {
+    return (
+      <Navigate
+        to={currentUser.role === 'NhanVien' ? '/portal/orders' : '/portal'}
+        replace
+      />
     );
   }
 
@@ -522,7 +531,7 @@ export const CheckoutPage: React.FC = () => {
                   Bạn chưa có địa chỉ nhận hàng nào.
                 </p>
                 <p className="text-[11px] text-zinc-500">
-                  Vui lòng thêm địa chỉ giao hàng để tiếp tục hoàn tất đơn hàng (UC-34).
+                  Vui lòng thêm địa chỉ giao hàng để tiếp tục hoàn tất đơn hàng.
                 </p>
                 <button
                   type="button"
@@ -1000,10 +1009,10 @@ export const CheckoutPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaymentGatewayState('FAILED')}
-                    className="w-full h-9 rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium"
+                    onClick={() => setPaymentGatewayState('IDLE')}
+                    className="w-full h-9 rounded-full border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-xs font-medium"
                   >
-                    Giả lập lỗi cổng thanh toán (UC-37 6a)
+                    Hủy
                   </button>
                 </div>
               </>

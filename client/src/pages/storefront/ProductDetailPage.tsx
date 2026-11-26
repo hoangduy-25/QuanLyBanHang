@@ -233,20 +233,22 @@ export const ProductDetailPage: React.FC = () => {
               className="block h-full w-full object-contain"
               loading="eager"
             />
-            <button
-              onClick={async () => {
-                const res = await toggleWishlist(product.id);
-                showToast(res.message);
-              }}
-              className={`absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm ${
-                isLiked
-                  ? 'bg-rose-50 text-rose-500'
-                  : 'bg-white text-zinc-700 hover:bg-zinc-50'
-              }`}
-              aria-label="Yêu thích"
-            >
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-            </button>
+            {currentUser?.role !== 'NhanVien' && currentUser?.role !== 'QuanLy' && (
+              <button
+                onClick={async () => {
+                  const res = await toggleWishlist(product.id);
+                  showToast(res.message);
+                }}
+                className={`absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm ${
+                  isLiked
+                    ? 'bg-rose-50 text-rose-500'
+                    : 'bg-white text-zinc-700 hover:bg-zinc-50'
+                }`}
+                aria-label="Yêu thích"
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -291,46 +293,48 @@ export const ProductDetailPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Quantity Selector & Add to Cart (UC-30) */}
-          <div className="pt-4 border-t border-zinc-100 flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center rounded-full border border-zinc-200/80 bg-zinc-50/60 h-10 px-1.5">
+          {/* Quantity Selector & Add to Cart (hidden for Staff/Admin) */}
+          {currentUser?.role !== 'NhanVien' && currentUser?.role !== 'QuanLy' && (
+            <div className="pt-4 border-t border-zinc-100 flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center rounded-full border border-zinc-200/80 bg-zinc-50/60 h-10 px-1.5">
+                <button
+                  type="button"
+                  disabled={isOutOfStock || quantity <= 1}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <span className="w-9 text-center text-xs font-semibold text-zinc-900">
+                  {isOutOfStock ? 0 : quantity}
+                </span>
+                <button
+                  type="button"
+                  disabled={isOutOfStock || quantity >= product.stock}
+                  onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white disabled:opacity-40 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
               <button
-                type="button"
-                disabled={isOutOfStock || quantity <= 1}
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white disabled:opacity-40 transition-colors"
+                disabled={isOutOfStock}
+                onClick={async () => {
+                  const res = await addToCart(product.id, quantity);
+                  showToast(res.message);
+                }}
+                className={`flex-1 h-10 px-5 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors ${
+                  isOutOfStock
+                    ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                    : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                }`}
               >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <span className="w-9 text-center text-xs font-semibold text-zinc-900">
-                {isOutOfStock ? 0 : quantity}
-              </span>
-              <button
-                type="button"
-                disabled={isOutOfStock || quantity >= product.stock}
-                onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-600 hover:bg-white disabled:opacity-40 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>{isOutOfStock ? 'Tạm hết hàng' : 'Thêm vào giỏ hàng'}</span>
               </button>
             </div>
-
-            <button
-              disabled={isOutOfStock}
-              onClick={async () => {
-                const res = await addToCart(product.id, quantity);
-                showToast(res.message);
-              }}
-              className={`flex-1 h-10 px-5 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors ${
-                isOutOfStock
-                  ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                  : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-              }`}
-            >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>{isOutOfStock ? 'Tạm hết hàng' : 'Thêm vào giỏ hàng'}</span>
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
