@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-    AlertCircle,
-    ArrowLeft,
-    CheckCircle2,
-    Eye,
-    EyeOff,
-    KeyRound,
-    Lock,
-    Mail,
-    Phone,
-    ShieldQuestion,
-    User as UserIcon,
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LogOut,
+  ShieldQuestion,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ROLE_LABELS } from '../../utils/formatters';
@@ -25,6 +21,24 @@ const PRESET_QUESTIONS = [
   'Tên thú cưng đầu tiên của bạn?',
   'Thành phố nơi bạn sinh ra?',
 ];
+
+const MODE_HEADER: Record<AuthMode, { title: string; subtitle: string }> = {
+  LOGIN: {
+    title: 'Đăng nhập',
+    subtitle: 'Chào mừng bạn trở lại.',
+  },
+  REGISTER: {
+    title: 'Đăng ký',
+    subtitle: 'Tạo tài khoản HCShop để bắt đầu mua sắm.',
+  },
+  FORGOT: {
+    title: 'Quên mật khẩu',
+    subtitle: 'Xác minh câu hỏi bảo mật để đặt lại mật khẩu.',
+  },
+};
+
+const INPUT_CLASS =
+  'w-full h-11 px-4 rounded-xl bg-[#f4f5f7] border border-zinc-200/70 text-[13px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:border-zinc-400 transition-colors disabled:opacity-60';
 
 export const AuthPage: React.FC = () => {
   const {
@@ -52,6 +66,8 @@ export const AuthPage: React.FC = () => {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirm, setRegConfirm] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirm, setShowRegConfirm] = useState(false);
   const [regQuestion, setRegQuestion] = useState(PRESET_QUESTIONS[0]);
   const [regAnswer, setRegAnswer] = useState('');
 
@@ -164,442 +180,458 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  const header = MODE_HEADER[mode];
+
   return (
-    <div className="max-w-4xl mx-auto py-4 pb-16 space-y-6">
-      <div>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-zinc-500 hover:text-zinc-900 transition-colors mb-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Quay lại cửa hàng
-        </Link>
-        <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">
-          Tài khoản HCShop
-        </h1>
-        <p className="text-[13px] text-zinc-500 mt-0.5">
-          Đăng nhập, tạo tài khoản thành viên hoặc khôi phục mật khẩu nhanh chóng
-        </p>
+    <div className="py-2 pb-16">
+      {/* Top-Left Back Link */}
+      <div className="mb-4">
+        {mode === 'LOGIN' ? (
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Quay lại</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => switchMode('LOGIN')}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Quay lại đăng nhập</span>
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left column: Main Auth Card */}
-        <div className="lg:col-span-7 bg-white rounded-3xl border border-zinc-200/80 p-6 sm:p-8 space-y-6">
-          {/* Mode Tabs */}
-          <div className="flex items-center gap-1.5 bg-[#f4f4f5] p-1 rounded-full">
+      {/* Centered Heading */}
+      <div className="text-center mb-7">
+        <h1 className="text-2xl sm:text-[26px] font-bold text-zinc-900 tracking-tight">
+          {header.title}
+        </h1>
+        <p className="text-[13px] text-zinc-400 mt-1">{header.subtitle}</p>
+      </div>
+
+      {/* Centered Auth Card */}
+      <div
+        className={`mx-auto bg-white rounded-[28px] border border-zinc-100 shadow-[0_14px_45px_rgba(15,23,42,0.06)] p-7 sm:p-9 space-y-5 ${
+          mode === 'REGISTER' ? 'max-w-[500px]' : 'max-w-[440px]'
+        }`}
+      >
+        {/* Active Signed-In Banner (only shown if already authenticated) */}
+        {currentUser && (
+          <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#f4f5f7] border border-zinc-200/70">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-zinc-900 truncate">
+                  {currentUser.fullName}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 shrink-0">
+                  {ROLE_LABELS[currentUser.role]}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-500 truncate">{currentUser.email}</p>
+            </div>
             <button
               type="button"
-              onClick={() => switchMode('LOGIN')}
-              className={`flex-1 py-2 rounded-full text-[13px] font-semibold transition-all ${
-                mode === 'LOGIN'
-                  ? 'bg-white text-zinc-900 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-900'
-              }`}
+              onClick={() => {
+                logoutUser();
+                setFeedback({ ok: true, text: 'Đã đăng xuất khỏi phiên hiện tại.' });
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-zinc-200 hover:bg-zinc-100 text-[11px] font-medium text-zinc-700 transition-colors shrink-0"
             >
-              Đăng nhập
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('REGISTER')}
-              className={`flex-1 py-2 rounded-full text-[13px] font-semibold transition-all ${
-                mode === 'REGISTER'
-                  ? 'bg-white text-zinc-900 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-900'
-              }`}
-            >
-              Đăng ký
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('FORGOT')}
-              className={`flex-1 py-2 rounded-full text-[13px] font-semibold transition-all ${
-                mode === 'FORGOT'
-                  ? 'bg-white text-zinc-900 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-900'
-              }`}
-            >
-              Quên mật khẩu
+              <LogOut className="w-3 h-3" />
+              <span>Đăng xuất</span>
             </button>
           </div>
+        )}
 
-          {/* Feedback Alert */}
-          {feedback && (
-            <div
-              className={`p-3.5 rounded-2xl border text-[13px] flex items-start gap-2.5 ${
-                feedback.ok
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                  : 'bg-rose-50 border-rose-200 text-rose-800'
-              }`}
-            >
-              {feedback.ok ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              )}
-              <span>{feedback.text}</span>
+        {/* Feedback Alert */}
+        {feedback && (
+          <div
+            className={`p-3.5 rounded-2xl border text-[13px] flex items-start gap-2.5 ${
+              feedback.ok
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}
+          >
+            {feedback.ok ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            )}
+            <span>{feedback.text}</span>
+          </div>
+        )}
+
+        {/* MODE 1: LOGIN (UC-02) */}
+        {mode === 'LOGIN' && (
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-2">
+                Tài khoản
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={254}
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                placeholder="Nhập email / số điện thoại..."
+                className={INPUT_CLASS}
+              />
             </div>
-          )}
 
-          {/* TAB 1: LOGIN (UC-02) */}
-          {mode === 'LOGIN' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-zinc-700">Mật khẩu</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoveryIdentifier(loginId);
+                    switchMode('FORGOT');
+                  }}
+                  className="text-xs font-medium text-blue-600 hover:underline"
+                >
+                  Quên mật khẩu?
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  required
+                  maxLength={128}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu..."
+                  className={`${INPUT_CLASS} pr-11`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword((visible) => !visible)}
+                  aria-label={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                  title={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-200/70 hover:text-zinc-700"
+                >
+                  {showLoginPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-11 rounded-full bg-[#18181b] text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-60"
+              >
+                {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              </button>
+            </div>
+
+            <p className="text-center text-xs text-zinc-600 pt-2">
+              Chưa có tài khoản?{' '}
+              <button
+                type="button"
+                onClick={() => switchMode('REGISTER')}
+                className="font-semibold text-blue-600 hover:underline"
+              >
+                Đăng ký ngay
+              </button>
+            </p>
+          </form>
+        )}
+
+        {/* MODE 2: REGISTER (UC-01) */}
+        {mode === 'REGISTER' && (
+          <form onSubmit={handleRegisterSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-[12px] font-semibold text-zinc-700 mb-1.5">
-                  Email hoặc Số điện thoại *
+                <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                  Họ và tên *
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={100}
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  placeholder="Nguyễn Văn A"
+                  className={INPUT_CLASS}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                  Số điện thoại *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={15}
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder="0988123456"
+                  className={INPUT_CLASS}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                Địa chỉ Email *
+              </label>
+              <input
+                type="email"
+                required
+                maxLength={254}
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="name@example.com"
+                className={INPUT_CLASS}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                  Mật khẩu *
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showRegPassword ? 'text' : 'password'}
+                    required
+                    maxLength={128}
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="Tối thiểu 8 ký tự..."
+                    className={`${INPUT_CLASS} pr-10`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword((v) => !v)}
+                    aria-label={showRegPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-200/70 hover:text-zinc-700"
+                  >
+                    {showRegPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                  Xác nhận mật khẩu *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showRegConfirm ? 'text' : 'password'}
+                    required
+                    maxLength={128}
+                    value={regConfirm}
+                    onChange={(e) => setRegConfirm(e.target.value)}
+                    placeholder="Nhập lại mật khẩu..."
+                    className={`${INPUT_CLASS} pr-10`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegConfirm((v) => !v)}
+                    aria-label={showRegConfirm ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-200/70 hover:text-zinc-700"
+                  >
+                    {showRegConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-zinc-400 -mt-2">
+              Mật khẩu tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và chữ số.
+            </p>
+
+            {/* Required Security Question setup during registration (UC-01) */}
+            <div className="p-4 rounded-2xl bg-[#f4f5f7] border border-zinc-200/70 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700">
+                <ShieldQuestion className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Câu hỏi bảo mật (bắt buộc) *</span>
+              </div>
+              <select
+                value={regQuestion}
+                onChange={(e) => setRegQuestion(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl bg-white border border-zinc-200/80 text-xs text-zinc-800 focus:outline-none focus:border-zinc-400"
+              >
+                {PRESET_QUESTIONS.map((q) => (
+                  <option key={q} value={q}>
+                    {q}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                required
+                minLength={2}
+                maxLength={255}
+                value={regAnswer}
+                onChange={(e) => setRegAnswer(e.target.value)}
+                placeholder="Nhập câu trả lời bảo mật (tối thiểu 2 ký tự)..."
+                className="w-full h-10 px-3 rounded-xl bg-white border border-zinc-200/80 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-400"
+              />
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-11 rounded-full bg-[#18181b] text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-60"
+              >
+                {isSubmitting ? 'Đang tạo tài khoản...' : 'Tạo tài khoản mới'}
+              </button>
+            </div>
+
+            <p className="text-center text-xs text-zinc-600 pt-1">
+              Đã có tài khoản?{' '}
+              <button
+                type="button"
+                onClick={() => switchMode('LOGIN')}
+                className="font-semibold text-blue-600 hover:underline"
+              >
+                Đăng nhập ngay
+              </button>
+            </p>
+          </form>
+        )}
+
+        {/* MODE 3: FORGOT PASSWORD VIA SECURITY QUESTION (UC-03) */}
+        {mode === 'FORGOT' && (
+          <div className="space-y-4">
+            {!recoveryUserId ? (
+              <form onSubmit={handleLookupRecovery} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-2">
+                    Tài khoản cần khôi phục
+                  </label>
                   <input
                     type="text"
                     required
                     maxLength={254}
-                    value={loginId}
-                    onChange={(e) => setLoginId(e.target.value)}
-                    placeholder="customer@hcshop.dev hoặc 0987654321"
-                    className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-900 transition-colors"
+                    value={recoveryIdentifier}
+                    onChange={(e) => setRecoveryIdentifier(e.target.value)}
+                    placeholder="Nhập email / số điện thoại đã đăng ký..."
+                    className={INPUT_CLASS}
                   />
                 </div>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[12px] font-semibold text-zinc-700">
-                    Mật khẩu *
+                <div className="pt-1">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full h-11 rounded-full bg-[#18181b] text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-60"
+                  >
+                    {isSubmitting ? 'Đang kiểm tra...' : 'Tiếp tục'}
+                  </button>
+                </div>
+
+                <p className="text-center text-xs text-zinc-600 pt-1">
+                  Nhớ lại mật khẩu?{' '}
+                  <button
+                    type="button"
+                    onClick={() => switchMode('LOGIN')}
+                    className="font-semibold text-blue-600 hover:underline"
+                  >
+                    Đăng nhập
+                  </button>
+                </p>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/70 text-[13px] text-blue-950">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 mb-0.5">
+                    Câu hỏi bảo mật của bạn
+                  </div>
+                  <div className="font-bold">{recoveryQuestion}</div>
+                </div>
+
+                {recoveryLockedOut && (
+                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    Chức năng đặt lại mật khẩu tạm thời bị khóa 15 phút do nhập sai quá 5 lần. Vui lòng thử lại sau.
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                    Câu trả lời bảo mật *
                   </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={255}
+                    disabled={recoveryLockedOut}
+                    value={recoveryAnswer}
+                    onChange={(e) => setRecoveryAnswer(e.target.value)}
+                    placeholder="Nhập câu trả lời bảo mật..."
+                    className={INPUT_CLASS}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                      Mật khẩu mới *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      maxLength={128}
+                      disabled={recoveryLockedOut}
+                      value={recoveryNewPassword}
+                      onChange={(e) => setRecoveryNewPassword(e.target.value)}
+                      placeholder="Tối thiểu 8 ký tự..."
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                      Xác nhận mật khẩu *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      maxLength={128}
+                      disabled={recoveryLockedOut}
+                      value={recoveryConfirmPassword}
+                      onChange={(e) => setRecoveryConfirmPassword(e.target.value)}
+                      placeholder="Nhập lại mật khẩu..."
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 pt-2">
                   <button
                     type="button"
                     onClick={() => {
-                      setRecoveryIdentifier(loginId);
-                      switchMode('FORGOT');
+                      setRecoveryUserId(null);
+                      setRecoveryLockedOut(false);
                     }}
-                    className="text-[12px] font-medium text-blue-600 hover:underline"
+                    className="px-4 h-11 rounded-full border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
                   >
-                    Quên mật khẩu?
+                    Đổi tài khoản
                   </button>
-                </div>
-                    <div className="relative">
-                        <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-
-                        <input
-                            type={showLoginPassword ? 'text' : 'password'}
-                            required
-                            maxLength={128}
-                            value={loginPassword}
-                            onChange={(e) => setLoginPassword(e.target.value)}
-                            placeholder="Nhập mật khẩu..."
-                            className="h-11 w-full rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] pl-10 pr-11 text-[13px] text-zinc-900 transition-colors focus:border-zinc-900 focus:bg-white focus:outline-none"
-                        />
-
-                        <button
-                            type="button"
-                            onClick={() => setShowLoginPassword((visible) => !visible)}
-                            aria-label={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
-                            title={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
-                            className="absolute right-3.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-200/70 hover:text-zinc-700"
-                        >
-                            {showLoginPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                            ) : (
-                                <Eye className="h-4 w-4" />
-                            )}
-                        </button>
-                    </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full h-11 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
-              >
-                Đăng nhập vào HCShop
-              </button>
-            </form>
-          )}
-
-          {/* TAB 2: REGISTER (UC-01) */}
-          {mode === 'REGISTER' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                    Họ và tên *
-                  </label>
-                  <div className="relative">
-                    <UserIcon className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      maxLength={100}
-                      value={regName}
-                      onChange={(e) => setRegName(e.target.value)}
-                      placeholder="Nguyễn Văn A"
-                      className="w-full h-10 pl-10 pr-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                                        Số điện thoại *
-                                    </label>
-                                    <div className="relative">
-                                        <Phone className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                                        <input
-                                            type="tel"
-                                            maxLength={15}
-                                            value={regPhone}
-                                            onChange={(e) => setRegPhone(e.target.value)}
-                                            placeholder="VD: 0988123456 hoặc +84988123456"
-                      className="w-full h-10 pl-10 pr-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                  Địa chỉ Email *
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    maxLength={254}
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full h-10 pl-10 pr-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900"
-                  />
-                </div>
-              </div>
-
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-                <div>
-                    <label className="mb-1 flex min-h-8 items-start text-[12px] font-semibold leading-4 text-zinc-700">
-                        Mật khẩu (tối thiểu 8 ký tự, có chữ hoa, thường, số) *
-                    </label>
-                    <input
-                        type="password"
-                        maxLength={128}
-                        value={regPassword}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        placeholder="••••••"
-                        className="h-10 w-full rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] px-3.5 text-[13px] focus:border-zinc-900 focus:bg-white focus:outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="mb-1 flex min-h-8 items-start text-[12px] font-semibold leading-4 text-zinc-700">
-                        Xác nhận mật khẩu *
-                    </label>
-                    <input
-                        type="password"
-                        maxLength={128}
-                        value={regConfirm}
-                        onChange={(e) => setRegConfirm(e.target.value)}
-                        placeholder="••••••"
-                        className="h-10 w-full rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] px-3.5 text-[13px] focus:border-zinc-900 focus:bg-white focus:outline-none"
-                    />
-                </div>
-            </div>
-
-              {/* Required Security Question setup during registration (UC-01) */}
-              <div className="p-4 rounded-2xl bg-[#f8f9fa] border border-zinc-200/70 space-y-3">
-                <div className="flex items-center gap-2 text-[12px] font-semibold text-zinc-800">
-                  <ShieldQuestion className="w-4 h-4 text-blue-600" />
-                  <span>Câu hỏi &amp; câu trả lời bảo mật (bắt buộc) *</span>
-                </div>
-                <select
-                  value={regQuestion}
-                  onChange={(e) => setRegQuestion(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl bg-white border border-zinc-200 text-[12px] text-zinc-800 focus:outline-none"
-                >
-                  {PRESET_QUESTIONS.map((q) => (
-                    <option key={q} value={q}>
-                      {q}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  required
-                  minLength={2}
-                  maxLength={255}
-                  value={regAnswer}
-                  onChange={(e) => setRegAnswer(e.target.value)}
-                  placeholder="Nhập câu trả lời bảo mật (tối thiểu 2 ký tự) *"
-                  className="w-full h-9 px-3 rounded-xl bg-white border border-zinc-200 text-[12px] text-zinc-800 focus:outline-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full h-11 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
-              >
-                Tạo tài khoản mới
-              </button>
-            </form>
-          )}
-
-          {/* TAB 3: FORGOT PASSWORD VIA SECURITY QUESTION (UC-03, CRIT-02) */}
-          {mode === 'FORGOT' && (
-            <div className="space-y-4">
-              {!recoveryUserId ? (
-                <form onSubmit={handleLookupRecovery} className="space-y-4">
-                  <p className="text-[13px] text-zinc-600 leading-relaxed">
-                    Nhập Email hoặc Số điện thoại đã đăng ký để xác minh qua câu hỏi bảo mật.
-                  </p>
-                  <div>
-                    <label className="block text-[12px] font-semibold text-zinc-700 mb-1.5">
-                      Email hoặc Số điện thoại cần khôi phục *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={254}
-                      value={recoveryIdentifier}
-                      onChange={(e) => setRecoveryIdentifier(e.target.value)}
-                      placeholder="VD: customer@hcshop.dev"
-                      className="w-full h-11 px-4 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900"
-                    />
-                  </div>
                   <button
                     type="submit"
-                    className="w-full h-11 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors"
+                    disabled={recoveryLockedOut || isSubmitting}
+                    className="flex-1 h-11 rounded-full bg-[#18181b] text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Tiếp tục kiểm tra Câu hỏi bảo mật
+                    {isSubmitting ? 'Đang cập nhật...' : 'Đặt lại mật khẩu'}
                   </button>
-                </form>
-              ) : (
-                <form onSubmit={handleResetPassword} className="space-y-4">
-                  <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/70 text-[13px] text-blue-950">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 mb-0.5">
-                      Câu hỏi bảo mật của bạn
-                    </div>
-                    <div className="font-bold">{recoveryQuestion}</div>
-                  </div>
-
-                  {recoveryLockedOut && (
-                    <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[12px] text-amber-800">
-                      Chức năng đặt lại mật khẩu tạm thời bị khóa 15 phút do nhập sai quá 5 lần (UC-03 5a). Vui lòng thử lại sau.
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                      Câu trả lời bảo mật *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={255}
-                      disabled={recoveryLockedOut}
-                      value={recoveryAnswer}
-                      onChange={(e) => setRecoveryAnswer(e.target.value)}
-                      placeholder="Nhập câu trả lời (VD: Phở, HUCE, 68IT6)..."
-                      className="w-full h-10 px-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900 disabled:opacity-60"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                        Mật khẩu mới *
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        maxLength={128}
-                        disabled={recoveryLockedOut}
-                        value={recoveryNewPassword}
-                        onChange={(e) => setRecoveryNewPassword(e.target.value)}
-                        placeholder="Tối thiểu 6 ký tự"
-                        className="w-full h-10 px-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900 disabled:opacity-60"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[12px] font-semibold text-zinc-700 mb-1">
-                        Xác nhận mật khẩu mới *
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        maxLength={128}
-                        disabled={recoveryLockedOut}
-                        value={recoveryConfirmPassword}
-                        onChange={(e) => setRecoveryConfirmPassword(e.target.value)}
-                        placeholder="Nhập lại mật khẩu mới"
-                        className="w-full h-10 px-3.5 rounded-2xl bg-[#f8f9fa] border border-zinc-200/80 text-[13px] focus:outline-none focus:bg-white focus:border-zinc-900 disabled:opacity-60"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRecoveryUserId(null);
-                        setRecoveryLockedOut(false);
-                      }}
-                      className="px-4 h-11 rounded-full border border-zinc-200 text-[13px] font-medium text-zinc-700 hover:bg-zinc-50"
-                    >
-                      Đổi tài khoản
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={recoveryLockedOut}
-                      className="flex-1 h-11 rounded-full bg-zinc-900 text-white text-[13px] font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Xác nhận đặt lại mật khẩu
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Right column: Demo Quick-Fill & Active Session Card */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* Active Session status */}
-          <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                Phiên đăng nhập hiện tại
-              </span>
-              {currentUser && (
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                  {ROLE_LABELS[currentUser.role]}
-                </span>
-              )}
-            </div>
-
-            {currentUser ? (
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <div>
-                  <div className="text-[14px] font-bold text-zinc-900">
-                    {currentUser.fullName} ({currentUser.code})
-                  </div>
-                  <div className="text-[12px] text-zinc-500">
-                    {currentUser.email} • {currentUser.phone}
-                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    logoutUser();
-                    setFeedback({ ok: true, text: 'Đã đăng xuất khỏi phiên hiện tại.' });
-                  }}
-                  className="px-3.5 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-[12px] font-medium text-zinc-800 transition-colors"
-                >
-                  Đăng xuất
-                </button>
-              </div>
-            ) : (
-              <p className="text-[13px] text-zinc-500">
-                Bạn đang ở chế độ <strong>Khách vãng lai (Guest)</strong>. Hãy đăng nhập bằng tài khoản SQL Server ở biểu mẫu bên trái.
-              </p>
+              </form>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

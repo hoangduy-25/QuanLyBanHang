@@ -8,6 +8,21 @@
   }
 }
 
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .auth-doodle-bg {
+    background-color: #fbfbfc;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420' fill='none' stroke='%2318181b' stroke-opacity='0.045' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg transform='translate(28 32) rotate(-14)'%3E%3Cpath d='M8 22h14l26-14v44L22 38H8a4 4 0 0 1-4-4v-8a4 4 0 0 1 4-4z'/%3E%3Cpath d='M16 38l5 16h8l-4-16'/%3E%3C/g%3E%3Cg transform='translate(175 18) rotate(12)'%3E%3Crect x='6' y='24' width='56' height='46' rx='6'/%3E%3Crect x='2' y='12' width='64' height='14' rx='4'/%3E%3Cpath d='M34 12v58'/%3E%3Cpath d='M34 12c-8-14-22-10-18 0 3 6 18 0 18 0zm0 0c8-14 22-10 18 0-3 6-18 0-18 0z'/%3E%3C/g%3E%3Cg transform='translate(320 26) rotate(8)'%3E%3Crect x='4' y='8' width='68' height='46' rx='8'/%3E%3Cpath d='M4 22h68'/%3E%3Cpath d='M16 36h18'/%3E%3C/g%3E%3Cg transform='translate(75 240) rotate(10)'%3E%3Crect x='6' y='4' width='46' height='78' rx='9'/%3E%3Cpath d='M22 12h14'/%3E%3Ccircle cx='29' cy='72' r='2.5'/%3E%3Cpath d='M20 48l18-18'/%3E%3Ccircle cx='21' cy='34' r='2.5'/%3E%3Ccircle cx='37' cy='46' r='2.5'/%3E%3C/g%3E%3Cg transform='translate(295 165) rotate(-12)'%3E%3Ccircle cx='24' cy='24' r='18'/%3E%3Cpath d='M37 37l16 16'/%3E%3C/g%3E%3Cg transform='translate(260 285) rotate(-8)'%3E%3Cpath d='M6 16a10 10 0 0 1 10-10h54a10 10 0 0 1 10 10v32a10 10 0 0 1-10 10H30l-16 12v-12h-0a10 10 0 0 1-8-10V16z'/%3E%3Ctext x='20' y='40' font-family='system-ui,sans-serif' font-size='20' font-weight='600' stroke='none' fill='%2318181b' fill-opacity='0.05'%3E24/7%3C/text%3E%3C/g%3E%3Cg transform='translate(160 155) rotate(18)'%3E%3Cpath d='M10 42L42 10'/%3E%3Ccircle cx='14' cy='14' r='6'/%3E%3Ccircle cx='38' cy='38' r='6'/%3E%3C/g%3E%3Cg transform='translate(26 160) rotate(-6)'%3E%3Cpath d='M24 44c10-12 18-20 18-28a18 18 0 1 0-36 0c0 8 8 16 18 28z'/%3E%3Ccircle cx='24' cy='16' r='6'/%3E%3C/g%3E%3Ccircle cx='126' cy='96' r='6'/%3E%3Ccircle cx='372' cy='128' r='5'/%3E%3Ccircle cx='206' cy='368' r='6'/%3E%3Cpath d='M138 350v12M132 356h12'/%3E%3Cpath d='M365 256v12M359 262h12'/%3E%3Cpath d='M256 112l10 6-10 6z'/%3E%3C/svg%3E");
+    background-size: 420px 420px;
+  }
+}
+
 /* Print optimization for UC-62 (In báo cáo) */
 @media print {
   .no-print {

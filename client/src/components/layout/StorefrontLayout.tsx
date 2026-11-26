@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Heart,
   LayoutDashboard,
-  LogIn,
   LogOut,
   MapPin,
   Package,
@@ -14,6 +15,7 @@ import {
   ShoppingBag,
   TicketPercent,
   User as UserIcon,
+  X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -36,8 +38,46 @@ export const StorefrontLayout: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const visibleCategories = categories.filter((c) => c.isVisible && !c.isDeleted);
+  const [catSearchOpen, setCatSearchOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const catInputRef = useRef<HTMLInputElement>(null);
+  const catNavRef = useRef<HTMLElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const visibleCategories = useMemo(
+    () => categories.filter((c) => c.isVisible && !c.isDeleted),
+    [categories]
+  );
+  const matchedCategories = useMemo(() => {
+    const q = categorySearch.trim().toLowerCase();
+    if (!q) return visibleCategories;
+    return visibleCategories.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q)
+    );
+  }, [visibleCategories, categorySearch]);
   const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const updateScrollButtons = () => {
+    const el = catNavRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    updateScrollButtons();
+    window.addEventListener('resize', updateScrollButtons);
+    return () => window.removeEventListener('resize', updateScrollButtons);
+  }, [matchedCategories.length, catSearchOpen]);
+
+  useEffect(() => {
+    if (catSearchOpen) {
+      catInputRef.current?.focus();
+    }
+  }, [catSearchOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -49,10 +89,20 @@ export const StorefrontLayout: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const isAuthPage = location.pathname === '/auth';
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8f9fa] text-zinc-900">
+    <div
+      className={`min-h-screen flex flex-col text-zinc-900 ${
+        isAuthPage ? 'auth-doodle-bg' : 'bg-[#f8f9fa]'
+      }`}
+    >
       {/* Two-Row Header */}
-      <header className="sticky top-0 z-30 bg-[#f8f9fa]/95 backdrop-blur-md border-b border-zinc-200/80">
+      <header
+        className={`sticky top-0 z-30 backdrop-blur-md border-b border-zinc-200/80 ${
+          isAuthPage ? 'bg-white/95' : 'bg-[#f8f9fa]/95'
+        }`}
+      >
         <div className="max-w-5xl mx-auto px-6 pt-3.5 pb-2.5">
           {/* Row 1: Brand + Wide Search Input + Cart Pill + User Pill */}
           <div className="flex items-center gap-4">
@@ -100,164 +150,278 @@ export const StorefrontLayout: React.FC = () => {
                 )}
               </button>
 
-              {/* User Profile Dropdown */}
-              <div className="relative" ref={menuRef}>
+              {/* Guest Login Button OR Signed-In User Dropdown */}
+              {!currentUser ? (
                 <button
-                  onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-2.5 pl-1.5 pr-3 h-9 rounded-full bg-white border border-zinc-200/80 hover:bg-zinc-100 transition-colors focus:outline-none"
+                  type="button"
+                  onClick={() => navigate('/auth')}
+                  className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-white border border-zinc-200/80 hover:bg-zinc-100 text-xs font-medium text-zinc-800 transition-colors focus:outline-none"
                 >
-                  {currentUser?.avatar ? (
-                    <img
-                      src={currentUser.avatar}
-                      alt={currentUser.fullName}
-                      className="w-6 h-6 rounded-full object-cover border border-zinc-200 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-200 via-indigo-300 to-purple-300 shrink-0" />
-                  )}
-                  <div className="hidden sm:block text-left leading-none">
-                    <p className="text-[11px] font-semibold text-zinc-900">
-                      {currentUser ? currentUser.fullName : 'Khách vãng lai'}
-                    </p>
-                    <p className="text-[10px] text-zinc-400 mt-0.5">
-                      {currentUser ? currentUser.email : 'Đăng nhập / Đăng ký'}
-                    </p>
-                  </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400 ml-1" />
+                  <UserIcon className="w-3.5 h-3.5 text-zinc-700" />
+                  <span>Đăng nhập</span>
                 </button>
-
-                {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-zinc-200/80 shadow-xl py-2 z-50 text-xs">
-                    <div className="px-3.5 py-1.5 text-[11px] font-medium text-zinc-400">
-                      Tài khoản cá nhân
+              ) : (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setMenuOpen((prev) => !prev)}
+                    className="flex items-center gap-2.5 pl-1.5 pr-3 h-9 rounded-full bg-white border border-zinc-200/80 hover:bg-zinc-100 transition-colors focus:outline-none"
+                  >
+                    {currentUser.avatar ? (
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.fullName}
+                        className="w-6 h-6 rounded-full object-cover border border-zinc-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-200 via-indigo-300 to-purple-300 shrink-0" />
+                    )}
+                    <div className="hidden sm:block text-left leading-none">
+                      <p className="text-[11px] font-semibold text-zinc-900">
+                        {currentUser.fullName}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        {currentUser.email}
+                      </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigate(currentUser ? '/account' : '/auth');
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                    >
-                      {currentUser ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-zinc-400 ml-1" />
+                  </button>
+
+                  {menuOpen && (
+                    <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-zinc-200/80 shadow-xl py-2 z-50 text-xs">
+                      <div className="px-3.5 py-1.5 text-[11px] font-medium text-zinc-400">
+                        Tài khoản cá nhân
+                      </div>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/account');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                      >
                         <UserIcon className="w-4 h-4 text-zinc-400" />
-                      ) : (
-                        <LogIn className="w-4 h-4 text-blue-500" />
+                        <span>Hồ sơ cá nhân</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/orders');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                      >
+                        <Package className="w-4 h-4 text-zinc-400" />
+                        <span>Đơn hàng của tôi</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/wishlist');
+                        }}
+                        className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Heart className="w-4 h-4 text-zinc-400" />
+                          <span>Sản phẩm yêu thích</span>
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          {wishlistProductIds.length}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/vouchers');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                      >
+                        <TicketPercent className="w-4 h-4 text-zinc-400" />
+                        <span>Kho mã giảm giá</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/account?tab=addresses');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                      >
+                        <MapPin className="w-4 h-4 text-zinc-400" />
+                        <span>Sổ địa chỉ</span>
+                      </button>
+
+                      {(currentUser.role === 'NhanVien' ||
+                        currentUser.role === 'QuanLy') && (
+                        <>
+                          <div className="my-1.5 border-t border-zinc-100" />
+                          <button
+                            onClick={() => {
+                              setMenuOpen(false);
+                              navigate(
+                                currentUser.role === 'NhanVien'
+                                  ? '/portal/orders'
+                                  : '/portal'
+                              );
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
+                          >
+                            <LayoutDashboard className="w-4 h-4 text-zinc-400" />
+                            <span>Mở trang Quản trị (/portal)</span>
+                          </button>
+                        </>
                       )}
-                      <span>{currentUser ? 'Hồ sơ cá nhân' : 'Đăng nhập / Đăng ký'}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigate('/orders');
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                    >
-                      <Package className="w-4 h-4 text-zinc-400" />
-                      <span>Đơn hàng của tôi</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigate('/wishlist');
-                      }}
-                      className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <Heart className="w-4 h-4 text-zinc-400" />
-                        <span>Sản phẩm yêu thích</span>
-                      </span>
-                      <span className="text-[11px] text-zinc-400">
-                        {wishlistProductIds.length}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigate('/vouchers');
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                    >
-                      <TicketPercent className="w-4 h-4 text-zinc-400" />
-                      <span>Kho mã giảm giá</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigate('/account?tab=addresses');
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                    >
-                      <MapPin className="w-4 h-4 text-zinc-400" />
-                      <span>Sổ địa chỉ</span>
-                    </button>
 
-                    {(currentUser?.role === 'NhanVien' ||
-                      currentUser?.role === 'QuanLy') && (
-                      <>
-                        <div className="my-1.5 border-t border-zinc-100" />
-                        <button
-                          onClick={() => {
-                            setMenuOpen(false);
-                            navigate(
-                              currentUser.role === 'NhanVien'
-                                ? '/portal/orders'
-                                : '/portal'
-                            );
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-100 text-zinc-700 text-left"
-                        >
-                          <LayoutDashboard className="w-4 h-4 text-zinc-400" />
-                          <span>Mở trang Quản trị (/portal)</span>
-                        </button>
-                      </>
-                    )}
-
-                    {currentUser && (
-                      <>
-                        <div className="my-1.5 border-t border-zinc-100" />
-                        <button
-                          onClick={() => {
-                            setMenuOpen(false);
-                            logoutUser();
-                            navigate('/');
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-rose-50 text-rose-600 text-left"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span>Đăng xuất</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+                      <div className="my-1.5 border-t border-zinc-100" />
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          logoutUser();
+                          navigate('/');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-rose-50 text-rose-600 text-left"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Row 2: Minimal Category Bar */}
-          <nav className="flex items-center gap-7 pl-[106px] pt-3 overflow-x-auto no-scrollbar">
-            {visibleCategories.map((cat, idx) => {
-              const shortLabel = String(idx + 1).padStart(2, '0');
-              const isSelected = selectedCategoryId === cat.id;
-              return (
+          {/* Row 2: Category Navigation Bar + Compact UC-12 Search Icon */}
+          <div className="flex items-center gap-2 pt-2.5">
+            <div className="relative flex-1 min-w-0 flex items-center">
+              {canScrollLeft && (
                 <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategoryId(isSelected ? 'ALL' : cat.id);
-                    if (location.pathname !== '/') navigate('/');
-                  }}
-                  title={cat.name}
-                  className={`text-xs transition-colors focus:outline-none ${
-                    isSelected
-                      ? 'text-zinc-900 font-semibold'
-                      : 'text-zinc-500 hover:text-zinc-900 font-normal'
-                  }`}
+                  type="button"
+                  onClick={() =>
+                    catNavRef.current?.scrollBy({ left: -200, behavior: 'smooth' })
+                  }
+                  aria-label="Cuộn danh mục sang trái"
+                  className="shrink-0 mr-1 w-6 h-6 rounded-full bg-white border border-zinc-200/80 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 inline-flex items-center justify-center shadow-sm transition-colors"
                 >
-                  {shortLabel}
+                  <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-              );
-            })}
-          </nav>
+              )}
+
+              <nav
+                ref={catNavRef}
+                onScroll={updateScrollButtons}
+                aria-label="Danh mục sản phẩm"
+                className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1 py-0.5"
+              >
+                {!categorySearch.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategoryId('ALL');
+                      if (location.pathname !== '/') navigate('/');
+                    }}
+                    className={`h-7 px-3 rounded-full text-xs whitespace-nowrap transition-colors focus:outline-none ${
+                      selectedCategoryId === 'ALL' && location.pathname === '/'
+                        ? 'bg-zinc-900 text-white font-medium'
+                        : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/70 font-normal'
+                    }`}
+                  >
+                    Tất cả
+                  </button>
+                )}
+
+                {matchedCategories.length === 0 ? (
+                  <span className="text-xs text-zinc-400 px-2 whitespace-nowrap">
+                    Không tìm thấy danh mục &ldquo;{categorySearch}&rdquo;
+                  </span>
+                ) : (
+                  matchedCategories.map((cat) => {
+                    const isSelected =
+                      selectedCategoryId === cat.id && location.pathname === '/';
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategoryId(isSelected ? 'ALL' : cat.id);
+                          if (location.pathname !== '/') navigate('/');
+                        }}
+                        title={cat.description || cat.name}
+                        className={`h-7 px-3 rounded-full text-xs whitespace-nowrap transition-colors focus:outline-none ${
+                          isSelected
+                            ? 'bg-zinc-900 text-white font-medium'
+                            : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/70 font-normal'
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })
+                )}
+              </nav>
+
+              {canScrollRight && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    catNavRef.current?.scrollBy({ left: 200, behavior: 'smooth' })
+                  }
+                  aria-label="Cuộn danh mục sang phải"
+                  className="shrink-0 ml-1 w-6 h-6 rounded-full bg-white border border-zinc-200/80 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 inline-flex items-center justify-center shadow-sm transition-colors"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* UC-12: Compact Category Search Toggle */}
+            <div className="shrink-0 flex items-center">
+              {catSearchOpen ? (
+                <div className="relative flex items-center">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 pointer-events-none" />
+                  <input
+                    ref={catInputRef}
+                    type="text"
+                    maxLength={100}
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setCategorySearch('');
+                        setCatSearchOpen(false);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!categorySearch.trim()) {
+                        setCatSearchOpen(false);
+                      }
+                    }}
+                    placeholder="Tìm danh mục..."
+                    aria-label="Tìm kiếm danh mục"
+                    className="w-40 sm:w-52 h-7 pl-8 pr-7 rounded-full bg-white border border-zinc-300 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-500 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setCategorySearch('');
+                      setCatSearchOpen(false);
+                    }}
+                    aria-label="Đóng tìm kiếm danh mục"
+                    className="absolute right-2 text-zinc-400 hover:text-zinc-700"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCatSearchOpen(true)}
+                  title="Tìm danh mục sản phẩm"
+                  aria-label="Tìm danh mục sản phẩm"
+                  className="w-7 h-7 rounded-full text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/70 inline-flex items-center justify-center transition-colors focus:outline-none"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
