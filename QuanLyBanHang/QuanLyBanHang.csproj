@@ -281,10 +281,10 @@
     <Content Include="images\categories\cat-laptop.png" />
     <Content Include="images\categories\cat-phu-kien.png" />
     <Content Include="images\categories\README.txt" />
-    <Content Include="images\products\airpods-4-anc.jpg" />
+    <Content Include="images\products\airpods-4-anc.png" />
     <Content Include="images\products\anker-gan-65w.jpg" />
     <Content Include="images\products\iphone-16-pro-max.jpg" />
-    <Content Include="images\products\logitech-mx-master-3s.jpg" />
+    <Content Include="images\products\logitech-mx-master-3s.webp" />
     <Content Include="images\products\macbook-air-m3.jpg" />
     <Content Include="images\products\README.txt" />
     <Content Include="images\products\samsung-s25-ultra.jpg" />

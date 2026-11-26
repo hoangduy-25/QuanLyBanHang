@@ -448,13 +448,13 @@ BEGIN TRY
     -- 1. TÀI KHOẢN (Id tự tăng: 1=QuanLy, 2-3=NhanVien, 4-6=KhachHang, 7=BiKhoa)
     INSERT INTO dbo.TaiKhoan (HoTen, Email, SoDienThoai, MatKhauHash, VaiTro, TrangThai, NgaySinh, GioiTinh, AnhDaiDien, CauHoiBaoMat, CauTraLoiHash, LyDoKhoa, SoLanDangNhapSai, KhoaTamDen, NgayTao)
     VALUES
-    (N'Nguyễn Minh Quân',  'admin@techshop.vn',       '0901000001', N'HASH_001', 'QuanLy',    'HoatDong', '1990-05-15', N'Nam',  N'/images/avatars/001.jpg', N'Tên trường cấp 3 của bạn?', N'ANS_001', NULL, 0, NULL, DATEADD(DAY, -90, @Now)),
-    (N'Trần Thị Lan Anh',  'lananh.nv@techshop.vn',   '0901000002', N'HASH_002', 'NhanVien',  'HoatDong', '1996-08-20', N'Nu',   N'/images/avatars/002.jpg', N'Tên thú cưng đầu tiên?',    N'ANS_002', NULL, 0, NULL, DATEADD(DAY, -60, @Now)),
-    (N'Lê Hoàng Nam',      'hoangnam.nv@techshop.vn', '0901000003', N'HASH_003', 'NhanVien',  'HoatDong', '1998-02-10', N'Nam',  N'/images/avatars/003.jpg', NULL, NULL, NULL, 0, NULL, DATEADD(DAY, -45, @Now)),
-    (N'Phạm Đức Huy',      'duchuy.pham@gmail.com',   '0912345671', N'HASH_004', 'KhachHang', 'HoatDong', '1999-11-12', N'Nam',  N'/images/avatars/004.jpg', N'Món ăn yêu thích?',         N'ANS_004', NULL, 0, NULL, DATEADD(DAY, -25, @Now)),
-    (N'Vũ Thu Trang',      'thutrang.vu@gmail.com',   '0912345672', N'HASH_005', 'KhachHang', 'HoatDong', '2001-04-05', N'Nu',   N'/images/avatars/005.jpg', NULL, NULL, NULL, 1, NULL, DATEADD(DAY, -18, @Now)),
-    (N'Đặng Quốc Bảo',     'quocbao.dang@gmail.com',  '0912345673', N'HASH_006', 'KhachHang', 'HoatDong', '1995-09-28', N'Khac', NULL,                       NULL, NULL, NULL, 0, NULL, DATEADD(DAY, -5,  @Now)),
-    (N'Hoàng Văn Spam',    'spam.user@gmail.com',     '0912345679', N'HASH_007', 'KhachHang', 'BiKhoa',   '2000-01-01', N'Nam',  NULL,                       NULL, NULL, N'Đặt đơn ảo nhiều lần không nhận hàng', 5, DATEADD(HOUR, 2, @Now), DATEADD(DAY, -20, @Now));
+    (N'Nguyễn Minh Quân',  'admin@techshop.vn',       '0901000001', N'HASH_001', 'QuanLy',    'HoatDong', '1990-05-15', N'Nam',  N'/images/avatars/avatar-admin.jpg',       N'Tên trường cấp 3 của bạn?', N'ANS_001', NULL, 0, NULL, DATEADD(DAY, -90, @Now)),
+    (N'Trần Thị Lan Anh',  'lananh.nv@techshop.vn',   '0901000002', N'HASH_002', 'NhanVien',  'HoatDong', '1996-08-20', N'Nu',   N'/images/avatars/avatar-nv-lananh.jpg',   N'Tên thú cưng đầu tiên?',    N'ANS_002', NULL, 0, NULL, DATEADD(DAY, -60, @Now)),
+    (N'Lê Hoàng Nam',      'hoangnam.nv@techshop.vn', '0901000003', N'HASH_003', 'NhanVien',  'HoatDong', '1998-02-10', N'Nam',  N'/images/avatars/avatar-nv-hoangnam.jpg', NULL, NULL, NULL, 0, NULL, DATEADD(DAY, -45, @Now)),
+    (N'Phạm Đức Huy',      'duchuy.pham@gmail.com',   '0912345671', N'HASH_004', 'KhachHang', 'HoatDong', '1999-11-12', N'Nam',  N'/images/avatars/avatar-kh-duchuy.jpg',   N'Món ăn yêu thích?',         N'ANS_004', NULL, 0, NULL, DATEADD(DAY, -25, @Now)),
+    (N'Vũ Thu Trang',      'thutrang.vu@gmail.com',   '0912345672', N'HASH_005', 'KhachHang', 'HoatDong', '2001-04-05', N'Nu',   N'/images/avatars/avatar-kh-thutrang.jpg', NULL, NULL, NULL, 1, NULL, DATEADD(DAY, -18, @Now)),
+    (N'Đặng Quốc Bảo',     'quocbao.dang@gmail.com',  '0912345673', N'HASH_006', 'KhachHang', 'HoatDong', '1995-09-28', N'Khac', N'/images/avatars/avatar-kh-quocbao.jpg',  NULL, NULL, NULL, 0, NULL, DATEADD(DAY, -5,  @Now)),
+    (N'Hoàng Văn Spam',    'spam.user@gmail.com',     '0912345679', N'HASH_007', 'KhachHang', 'BiKhoa',   '2000-01-01', N'Nam',  NULL,                                      NULL, NULL, N'Đặt đơn ảo nhiều lần không nhận hàng', 5, DATEADD(HOUR, 2, @Now), DATEADD(DAY, -20, @Now));
 
     -- 2. LỊCH SỬ KHÓA TÀI KHOẢN
     INSERT INTO dbo.LichSuKhoaTaiKhoan (TaiKhoanId, QuanLyId, TrangThaiMoi, LyDo, ThoiDiem)
@@ -474,23 +474,23 @@ BEGIN TRY
     -- 4. DANH MỤC (Id tự tăng: 1..4 đang bán, 5 đã xóa mềm)
     INSERT INTO dbo.DanhMuc (Ten, MoTa, HinhAnh, HienThi, IsDeleted, NgayTao)
     VALUES
-    (N'Điện thoại thông minh', N'Smartphone chính hãng Apple, Samsung, Xiaomi', N'/images/categories/001.png', 1, 0, DATEADD(DAY, -80, @Now)),
-    (N'Laptop & Máy tính',     N'Laptop văn phòng, lập trình và đồ họa',        N'/images/categories/002.png', 1, 0, DATEADD(DAY, -80, @Now)),
-    (N'Thiết bị âm thanh',     N'Tai nghe True Wireless, loa Bluetooth',        N'/images/categories/003.png', 1, 0, DATEADD(DAY, -75, @Now)),
-    (N'Phụ kiện công nghệ',    N'Chuột, bàn phím, củ sạc nhanh GaN',            N'/images/categories/004.png', 1, 0, DATEADD(DAY, -75, @Now)),
-    (N'Máy ảnh cũ (Ngừng KD)', N'Danh mục đã ngừng kinh doanh',                 NULL,                          0, 1, DATEADD(DAY, -90, @Now));
+    (N'Điện thoại thông minh', N'Smartphone chính hãng Apple, Samsung, Xiaomi', N'/images/categories/cat-dien-thoai.png', 1, 0, DATEADD(DAY, -80, @Now)),
+    (N'Laptop & Máy tính',     N'Laptop văn phòng, lập trình và đồ họa',        N'/images/categories/cat-laptop.png',     1, 0, DATEADD(DAY, -80, @Now)),
+    (N'Thiết bị âm thanh',     N'Tai nghe True Wireless, loa Bluetooth',        N'/images/categories/cat-am-thanh.png',   1, 0, DATEADD(DAY, -75, @Now)),
+    (N'Phụ kiện công nghệ',    N'Chuột, bàn phím, củ sạc nhanh GaN',            N'/images/categories/cat-phu-kien.png',   1, 0, DATEADD(DAY, -75, @Now)),
+    (N'Máy ảnh cũ (Ngừng KD)', N'Danh mục đã ngừng kinh doanh',                 NULL,                                     0, 1, DATEADD(DAY, -90, @Now));
 
     -- 5. SẢN PHẨM (Id tự tăng: 1..7 đang bán, 8 đã xóa mềm)
     INSERT INTO dbo.SanPham (DanhMucId, MaSanPham, Ten, MoTa, HinhAnh, GiaBan, HienThi, IsDeleted, NgayTao)
     VALUES
-    (1, 'SP001', N'iPhone 16 Pro Max 256GB',          N'Chip A18 Pro, khung Titan, màn hình 6.9 inch 120Hz', N'/images/products/001.jpg', 32990000, 1, 0, DATEADD(DAY, -60, @Now)),
-    (1, 'SP002', N'Samsung Galaxy S25 Ultra 256GB',   N'Camera 200MP, bút S-Pen tích hợp, Galaxy AI',        N'/images/products/002.jpg', 29990000, 1, 0, DATEADD(DAY, -55, @Now)),
-    (2, 'SP003', N'MacBook Air 13 inch M3 16GB/512GB',N'Siêu mỏng nhẹ, pin 18 tiếng, màn hình Liquid Retina',N'/images/products/003.jpg', 28500000, 1, 0, DATEADD(DAY, -50, @Now)),
-    (2, 'SP004', N'Lenovo ThinkPad X1 Carbon Gen 12', N'Intel Core Ultra 7, RAM 16GB, chuẩn bền quân đội',   N'/images/products/004.jpg', 35000000, 1, 0, DATEADD(DAY, -45, @Now)),
-    (3, 'SP005', N'AirPods 4 chống ồn chủ động ANC',  N'Chip H2, chống ồn chủ động, hộp sạc USB-C',          N'/images/products/005.jpg',  4500000, 1, 0, DATEADD(DAY, -40, @Now)),
-    (4, 'SP006', N'Chuột Logitech MX Master 3S',      N'Cảm biến 8000 DPI, cuộn điện từ MagSpeed, click êm', N'/images/products/006.jpg',  2400000, 1, 0, DATEADD(DAY, -35, @Now)),
-    (4, 'SP007', N'Củ sạc nhanh Anker GaN 65W 3 cổng',N'Công nghệ GaN II nhỏ gọn, hỗ trợ PD 3.0 sạc laptop', N'/images/products/007.jpg',   950000, 1, 0, DATEADD(DAY, -30, @Now)),
-    (1, 'SP008', N'iPhone 11 64GB (Ngừng sản xuất)',  N'Sản phẩm đã ngừng kinh doanh',                       NULL,                        10000000, 0, 1, DATEADD(DAY, -80, @Now));
+    (1, 'SP001', N'iPhone 16 Pro Max 256GB',          N'Chip A18 Pro, khung Titan, màn hình 6.9 inch 120Hz', N'/images/products/iphone-16-pro-max.jpg',     32990000, 1, 0, DATEADD(DAY, -60, @Now)),
+    (1, 'SP002', N'Samsung Galaxy S25 Ultra 256GB',   N'Camera 200MP, bút S-Pen tích hợp, Galaxy AI',        N'/images/products/samsung-s25-ultra.jpg',     29990000, 1, 0, DATEADD(DAY, -55, @Now)),
+    (2, 'SP003', N'MacBook Air 13 inch M3 16GB/512GB',N'Siêu mỏng nhẹ, pin 18 tiếng, màn hình Liquid Retina',N'/images/products/macbook-air-m3.jpg',        28500000, 1, 0, DATEADD(DAY, -50, @Now)),
+    (2, 'SP004', N'Lenovo ThinkPad X1 Carbon Gen 12', N'Intel Core Ultra 7, RAM 16GB, chuẩn bền quân đội',   N'/images/products/thinkpad-x1-carbon.jpg',    35000000, 1, 0, DATEADD(DAY, -45, @Now)),
+    (3, 'SP005', N'AirPods 4 chống ồn chủ động ANC',  N'Chip H2, chống ồn chủ động, hộp sạc USB-C',          N'/images/products/airpods-4-anc.png',          4500000, 1, 0, DATEADD(DAY, -40, @Now)),
+    (4, 'SP006', N'Chuột Logitech MX Master 3S',      N'Cảm biến 8000 DPI, cuộn điện từ MagSpeed, click êm', N'/images/products/logitech-mx-master-3s.webp', 2400000, 1, 0, DATEADD(DAY, -35, @Now)),
+    (4, 'SP007', N'Củ sạc nhanh Anker GaN 65W 3 cổng',N'Công nghệ GaN II nhỏ gọn, hỗ trợ PD 3.0 sạc laptop', N'/images/products/anker-gan-65w.jpg',           950000, 1, 0, DATEADD(DAY, -30, @Now)),
+    (1, 'SP008', N'iPhone 11 64GB (Ngừng sản xuất)',  N'Sản phẩm đã ngừng kinh doanh',                       NULL,                                          10000000, 0, 1, DATEADD(DAY, -80, @Now));
 
     -- 6. TỒN KHO (Id tự tăng: 1..7; sản phẩm 4 và 7 sắp hết hàng)
     INSERT INTO dbo.TonKho (SanPhamId, SoLuongTon, NguongToiThieu)
@@ -587,9 +587,9 @@ BEGIN TRY
     -- 15. ĐÁNH GIÁ SẢN PHẨM (Id tự tăng: 1..3)
     INSERT INTO dbo.DanhGia (TaiKhoanId, SanPhamId, DonHangId, SoSao, NoiDung, HinhAnh, DaChinhSua, NgayTao, NgayCapNhat, LyDoXoa, IsDeleted)
     VALUES
-    (4, 1, 1, 5, N'Máy nguyên seal chính hãng VN/A, giao hàng cực nhanh, đóng gói chống sốc rất kỹ.', N'/images/reviews/001.jpg', 0, DATEADD(DAY, -11, @Now), NULL, NULL, 0),
-    (4, 5, 1, 4, N'Chống ồn tốt hơn đời cũ nhiều, đeo thoải mái. Trừ 1 sao vì hộp hơi dễ xước.',   NULL,                       1, DATEADD(DAY, -11, @Now), DATEADD(DAY, -10, @Now), NULL, 0),
-    (5, 3, 2, 5, N'Máy nhẹ, pin trâu dùng cả ngày không cần sạc. Nhân viên tư vấn nhiệt tình!',     N'/images/reviews/003.jpg', 0, DATEADD(DAY, -6,  @Now), NULL, NULL, 0);
+    (4, 1, 1, 5, N'Máy nguyên seal chính hãng VN/A, giao hàng cực nhanh, đóng gói chống sốc rất kỹ.', N'/images/reviews/review-iphone-16.jpg',  0, DATEADD(DAY, -11, @Now), NULL, NULL, 0),
+    (4, 5, 1, 4, N'Chống ồn tốt hơn đời cũ nhiều, đeo thoải mái. Trừ 1 sao vì hộp hơi dễ xước.',   NULL,                                     1, DATEADD(DAY, -11, @Now), DATEADD(DAY, -10, @Now), NULL, 0),
+    (5, 3, 2, 5, N'Máy nhẹ, pin trâu dùng cả ngày không cần sạc. Nhân viên tư vấn nhiệt tình!',     N'/images/reviews/review-macbook-m3.jpg', 0, DATEADD(DAY, -6,  @Now), NULL, NULL, 0);
 
     -- 16. PHẢN HỒI ĐÁNH GIÁ
     INSERT INTO dbo.PhanHoiDanhGia (DanhGiaId, TaiKhoanId, NoiDung, NgayTao)
